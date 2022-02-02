@@ -72,10 +72,11 @@ class Importer {
             $modified_date = \DateTime::createFromFormat( 'Y-m-d H:i:s', $modified_date );
 
             do_action( $this->event, $args[ 'id'] );
-            remove_all_actions( "save_post_{$this->post_type}" );
+            remove_action( "save_post_{$this->post_type}", array( $this, 'schedule_cron' ), 9999 );
             wp_update_post( 
                 [
                     'ID'            => $args[ 'id' ],
+                    'post_status'   => 'publish'
                 ], 
                 true, 
                 false 

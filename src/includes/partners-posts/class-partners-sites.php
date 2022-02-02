@@ -134,13 +134,13 @@ class Partners_Sites {
 
 	}
 	public function add_cmb2_fields() {
-		if( $_SERVER['REQUEST_METHOD'] != 'GET' ) {
-			return;
-		} 
+		if ( '/wp-admin/post.php' == $_SERVER[ 'PHP_SELF' ] && 'GET' == $_SERVER['REQUEST_METHOD'] && ! isset( $_REQUEST[ 'post_type'] ) ) {
+			$_REQUEST[ 'post_type'] = get_post_type( $_GET[ 'post' ] );
+		}
 		if ('/wp-admin/post.php' != $_SERVER[ 'PHP_SELF' ] && '/wp-admin/post-new.php' != $_SERVER[ 'PHP_SELF' ] ) {
 			return;
 		}
-		if ( '/wp-admin/post.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != get_post_type( $_GET[ 'post' ] ) ) {
+		if ( '/wp-admin/post.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != $_REQUEST[ 'post_type' ] ) {
 			return;
 		} 
 		if ( '/wp-admin/post-new.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != $_GET[ 'post_type' ] ) {
@@ -165,6 +165,7 @@ class Partners_Sites {
 			'name' => __( 'Site URL', 'jeo-mps' ),
 			'id' => $prefix . '_site_url',
 			'type' => 'text',
+			'default' => get_post_meta( $post_id, $prefix . '_site_url', true )
 		) );
 		if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
 			$options = [
