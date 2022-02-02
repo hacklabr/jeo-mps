@@ -138,6 +138,16 @@ class Partners_Sites {
 
 	}
 	public function add_cmb2_fields() {
+		if ('/wp-admin/post.php' != $_SERVER[ 'PHP_SELF' ] && '/wp-admin/post-new.php' != $_SERVER[ 'PHP_SELF' ] ) {
+			return;
+		}
+		if ( '/wp-admin/post.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != get_post_type( $_GET[ 'post' ] ) ) {
+			return;
+		} 
+		if ( '/wp-admin/post-new.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != $_GET[ 'post_type' ] ) {
+			return;
+		} 
+		
 		$prefix = $this->post_type;
 		$post_id = false;
 		if ( isset( $_GET[ 'post'] ) && ! empty( $_GET[ 'post'] ) ) {
@@ -310,13 +320,13 @@ class Partners_Sites {
 	 */
 	public function remove_autosave( $search, $wp_query ) {
 		if( ! is_admin() ) {
-			return;
+			return $search;
 		}
 		if ( ! isset( $_GET[ 'post_type'] ) ) {
-			return;
+			return $search;
 		}
 		if ( $this->post_type != $_GET[ 'post_type'] ) {
-			return;
+			return $search;
 		}
 		global $wpdb;
 		$term = __( 'Auto Draft' );
