@@ -18,10 +18,6 @@ class Partners_Sites {
 
 		// post published and updated terms update
 		add_filter( 'gettext', [ $this, 'update_gettext'], 10, 3 );
-
-		//remove autosave
-		add_filter( 'posts_search', [ $this, 'remove_autosave' ], 10, 2 );
-
 	}
 
 	public function remove_metaboxes() {
@@ -138,6 +134,9 @@ class Partners_Sites {
 
 	}
 	public function add_cmb2_fields() {
+		if( $_SERVER['REQUEST_METHOD'] != 'GET' ) {
+			return;
+		} 
 		if ('/wp-admin/post.php' != $_SERVER[ 'PHP_SELF' ] && '/wp-admin/post-new.php' != $_SERVER[ 'PHP_SELF' ] ) {
 			return;
 		}
@@ -310,27 +309,5 @@ class Partners_Sites {
 			return __( 'Site updated and synchronization process is running in the background', 'jeo-mps' );
 		}
 		return $translated_text;
-	}
-	/**
-	 * Remove autosave posts from dashboard list
-	 *
-	 * @param string $search
-	 * @param object $wp_query
-	 * @return string
-	 */
-	public function remove_autosave( $search, $wp_query ) {
-		if( ! is_admin() ) {
-			return $search;
-		}
-		if ( ! isset( $_GET[ 'post_type'] ) ) {
-			return $search;
-		}
-		if ( $this->post_type != $_GET[ 'post_type'] ) {
-			return $search;
-		}
-		global $wpdb;
-		$term = __( 'Auto Draft' );
-		$search .= "AND $wpdb->posts.post_title != '$term'";
-		return $search;
 	}
 }
