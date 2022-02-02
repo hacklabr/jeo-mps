@@ -171,6 +171,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
           
     }
     save() {
+
         document.getElementById( 'run_import_now' ).value = 'false';
         document.getElementById( 'post' ).submit();
     }
@@ -268,7 +269,8 @@ if (style.styleSheet){
 
 // init react
 document.addEventListener( 'DOMContentLoaded', () => {
-    
+    document.getElementById( 'run_import_now' ).value = 'auto_save';
+
     const siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
     document.getElementById( 'major-publishing-actions' ).style.display = 'flex';
     let metabox = document.querySelector( '#publishing-action' );

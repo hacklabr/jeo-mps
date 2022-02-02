@@ -1,8 +1,6 @@
 <?php
 namespace Jeo_MPS;
 
-use DateTime;
-
 class Importer {
 
 	use Singleton;
@@ -44,10 +42,12 @@ class Importer {
      * @return void
      */
     public function schedule_cron( $id, $site, $update ) {
-        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        if ( ! isset( $_POST[ 'run_import_now'] ) ) {
             return;
         }
-        
+        if ( 'auto_save' === $_POST[ 'run_import_now'] ) {
+            return;
+        }
         $args = [
             'id' => $id
         ];
@@ -68,46 +68,14 @@ class Importer {
         // Run first import after save first time 
         // Run now if button Save and Run Now is clicked
         if ( ! $update || ( isset( $_POST[ 'run_import_now'] ) && 'true' == $_POST[ 'run_import_now'] )  ) {
-            $modified_date = get_post_meta( $args[ 'id'], '_jeo_mps_last_update', true );
-            if ( ! $modified_date ) {
-                $modified_date = 0;
-            }
-            //echo $modified_date;
-            //die();
-            $modified_date = DateTime::createFromFormat( 'U', $modified_date );
-            $now = new DateTime();
-            $diff = $now->diff( $modified_date );
-            $minutes = $diff->days * 24 * 60;
-            $minutes += $diff->h * 60;
-            $minutes += $diff->i;
+            $modified_date = get_the_modified_date( 'Y-m-d H:i:s', $args[ 'id'] );
+            $modified_date = \DateTime::createFromFormat( 'Y-m-d H:i:s', $modified_date );
 
-
-            if ( round( absint( $minutes ) ) <= 5 ) {
-                wp_clear_scheduled_hook( $this->event, $args, false );
-                if ( 'disabled' != $interval ) {
-                    wp_schedule_event( time(), $interval, $this->event, $args );
-                } else {
-                    wp_schedule_single_event( time(), $this->event, $args );
-                }
-
-                do_action( $this->event, $args[ 'id'] );
-                wp_update_post( 
-                    [
-                        'ID'            => $args[ 'id' ],
-                        'post_status'   => 'publish'
-                    ], 
-                    true, 
-                    false
-                );
-                
-                return;
-            }
             do_action( $this->event, $args[ 'id'] );
             remove_all_actions( "save_post_{$this->post_type}" );
             wp_update_post( 
                 [
                     'ID'            => $args[ 'id' ],
-                    'post_status'   => 'publish'
                 ], 
                 true, 
                 false 
@@ -196,9 +164,6 @@ class Importer {
                     }
 
                 }
-            }
-            if ( '1' == $page ) {
-                update_post_meta( $id, '_jeo_mps_last_update', time() );
             }
 
         } 

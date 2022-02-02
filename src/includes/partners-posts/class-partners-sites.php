@@ -211,7 +211,7 @@ class Partners_Sites {
 		$site_info_box->add_field( array(
 			'id'   		=> 'run_import_now',
 			'type' 		=> 'hidden',
-			'default' 	=> 'false',
+			'default' 	=> 'auto_save',
 		) );
 
 		$site_info_box->add_field( array(
