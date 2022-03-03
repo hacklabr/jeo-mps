@@ -15,9 +15,19 @@ class Partners_Sites {
 		add_action( 'admin_init', [ $this, 'load_assets' ] );
 		add_action( 'cmb2_init', [ $this, 'add_cmb2_fields'] );
 		add_action( 'admin_head', [ $this, 'remove_metaboxes'], 9999 );
+		add_action( "save_post_{$this->post_type}", [ $this, 'save_categories_meta' ], 100, 3 );
+
 
 		// post published and updated terms update
 		add_filter( 'gettext', [ $this, 'update_gettext'], 10, 3 );
+	}
+    public function save_categories_meta( $id, $site, $update ) {
+		if ( isset( $_POST[ '_partners_sites_local_category'] ) ) {
+			$category_slug = $_POST[ '_partners_sites_local_category'];
+			$category_object = get_term_by( 'slug', $category_slug, 'category', OBJECT );
+			update_post_meta( $id, $this->post_type. '_category', [ $category_object->term_id ], null );
+		}
+		
 	}
 
 	public function remove_metaboxes() {
@@ -247,7 +257,7 @@ class Partners_Sites {
 			remove_filter('get_term', array($sitepress,'get_term_adjust_id'));
 			remove_filter('terms_clauses', array($sitepress,'terms_clauses'));
 		}
-
+		
  		$post_config_box->add_field( array(
 			'name' 				=> __( 'Post category on your site', 'jeo-mps' ),
 			'id' 				=> $prefix . '_local_category',

@@ -68,11 +68,48 @@ class Importer {
         // Run first import after save first time 
         // Run now if button Save and Run Now is clicked
         if ( ! $update || ( isset( $_POST[ 'run_import_now'] ) && 'true' == $_POST[ 'run_import_now'] )  ) {
+            //$modified_date = get_post_meta( $args[ 'id'], '_jeo_mps_last_update', true );
+            $modified_date = 0;
+            if ( ! $modified_date ) {
+                $modified_date = 0;
+            }
+            //echo $modified_date;
+            //die();
+            $modified_date = \DateTime::createFromFormat( 'U', $modified_date );
+            $now = new \DateTime();
+            $diff = $now->diff( $modified_date );
+            $minutes = $diff->days * 24 * 60;
+            $minutes += $diff->h * 60;
+            $minutes += $diff->i;
             $modified_date = get_the_modified_date( 'Y-m-d H:i:s', $args[ 'id'] );
             $modified_date = \DateTime::createFromFormat( 'Y-m-d H:i:s', $modified_date );
 
+
+            if ( round( absint( $minutes ) ) <= 5 ) {
+                wp_clear_scheduled_hook( $this->event, $args, false );
+                if ( 'disabled' != $interval ) {
+                    wp_schedule_event( time(), $interval, $this->event, $args );
+                } else {
+                    wp_schedule_single_event( time(), $this->event, $args );
+                }
+
+                //do_action( $this->event, $args[ 'id'] );
+
+                remove_all_actions( "save_post_{$this->post_type}" );
+                wp_update_post( 
+                    [
+                        'ID'            => $args[ 'id' ],
+                        'post_status'   => 'publish'
+                    ], 
+                    true, 
+                    false
+                );
+
+                return;
+            }
             do_action( $this->event, $args[ 'id'] );
-            remove_action( "save_post_{$this->post_type}", array( $this, 'schedule_cron' ), 9999 );
+            remove_all_actions( "save_post_{$this->post_type}" );
+
             wp_update_post( 
                 [
                     'ID'            => $args[ 'id' ],
@@ -115,7 +152,9 @@ class Importer {
 
         $request_params = [ 'per_page' => 5, 'page' => $page, '_embed' => true ];
         $data = get_post_meta( $id );
-
+        if ( false === $data ) {
+            return;
+        }
 
         if ( ! isset( $data[ "{$this->post_type}_site_url" ] ) || ! filter_var( $data[ "{$this->post_type}_site_url" ][0], FILTER_VALIDATE_URL ) ) {
             return;
@@ -167,7 +206,10 @@ class Importer {
                 }
             }
 
-        } 
+        }
+        if ( '1' == $page ) {
+            update_post_meta( $id, '_jeo_mps_last_update', time() );
+        }
     }
     /**
      * Undocumented function
@@ -180,12 +222,8 @@ class Importer {
         global $wpdb;
 
         $posts = json_decode( $posts, true );
-        $category = wp_get_post_categories( $id );
-        if ( ! $category ) {
-            if ( isset( $_POST[ '_partners_sites_local_category'] ) ) {
-                $category = [ $_POST[ '_partners_sites_local_category'] ];
-            }
-        }
+        $category = get_post_meta( $id, $this->post_type. '_category', true );
+        
         if( taxonomy_exists( 'partner' ) ) {
             if( isset( $_POST[ '_partners_sites_newspack_partner'] ) ) {
                 $partner_term = get_term_by( 'slug', $_POST[ '_partners_sites_newspack_partner'], 'partner', OBJECT, 'raw' );
@@ -227,7 +265,6 @@ class Importer {
                 'post_date'         => $post[ 'date' ],
                 'post_name'         => $post[ 'slug' ],
                 'meta_input'        => $metadata,
-                'post_category'     => $category,
                 'post_status'       => 'publish',
                 'post_type'         => 'post',
             ];
@@ -241,6 +278,9 @@ class Importer {
                     if( $partner_terms ) {
                         wp_set_object_terms( $post_inserted, [ $partner_terms[0]->term_id ], 'partner', true );
                     }
+                }
+                if ( $category ) {
+                    wp_set_object_terms( $post_inserted, [ absint( $category[0] ) ], 'category', false );
                 }
             }
         }
