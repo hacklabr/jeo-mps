@@ -7,6 +7,7 @@ class Importer {
 
 	public $post_type = '_partners_sites';
     public $event = 'jeo_media_partners_import_posts';
+    public $lang = false;
 
 	protected function init() {
         add_filter( 'cron_schedules', [ $this, 'cron_schedules' ] );
@@ -184,6 +185,12 @@ class Importer {
         if ( '/' === substr( $URL, -1) ) {
             $URL = substr( $URL, 0, -1);
         }
+        if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
+            if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ] ) {
+                $request_params[ 'lang' ] = $data[ "{$this->post_type}_remote_lang" ][0];
+                $this->lang = $data[ "{$this->post_type}_remote_lang" ][0];
+            }
+		}
         $URL = $URL . '/wp-json/wp/v2/posts/?' . http_build_query( $request_params );
 
         $response = wp_remote_get( $URL, [] );
@@ -269,7 +276,7 @@ class Importer {
                 'post_type'         => 'post',
             ];
             $post_inserted = wp_insert_post( $post_args, true, true );
-
+            
             if ( $post_inserted && ! is_wp_error( $post_inserted ) ) {
                 if ( isset( $post['_embedded'] ) && isset( $post['_embedded']['wp:featuredmedia'] ) ){
                     $this->upload_thumbnail( $post_inserted, $post['_embedded']['wp:featuredmedia'][0]['source_url'] );
@@ -281,6 +288,27 @@ class Importer {
                 }
                 if ( $category ) {
                     wp_set_object_terms( $post_inserted, [ absint( $category[0] ) ], 'category', false );
+                }
+
+                // set wpml post language
+                if ( $this->lang ) {
+                    if( ! function_exists( 'wpml_get_content_trid') ) {
+                        // Include WPML API
+                        include_once( WP_PLUGIN_DIR . '/sitepress-multilingual-cms/inc/wpml-api.php' );
+                    }
+                    $trid = wpml_get_content_trid( 'post_post', $post_inserted );
+                      
+                    // Update the post language info
+                    $language_args = [
+                        'element_id' => $post_inserted,
+                        'element_type' => 'post_post',
+                        'trid' => $trid,
+                        'language_code' => $this->lang,
+                        'source_language_code' => null,
+                    ];
+                 
+                    do_action( 'wpml_set_element_language_details', $language_args );
+                
                 }
             }
         }
