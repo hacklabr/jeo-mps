@@ -15,9 +15,6 @@ class Importer {
         add_action( "save_post_{$this->post_type}", [ $this, 'schedule_cron' ], 9999, 3 );
 
         add_action( $this->event, [ $this, 'run_cron'], 10, 2 );
-
-        
-        //add_action( 'admin_init', [ $this, 'admin_init'] );
     }
     /**
      * Add custom schedules interval
@@ -69,6 +66,7 @@ class Importer {
         // Run first import after save first time 
         // Run now if button Save and Run Now is clicked
         if ( ! $update || ( isset( $_POST[ 'run_import_now'] ) && 'true' == $_POST[ 'run_import_now'] )  ) {
+           
             //$modified_date = get_post_meta( $args[ 'id'], '_jeo_mps_last_update', true );
             $modified_date = 0;
             if ( ! $modified_date ) {
@@ -154,6 +152,7 @@ class Importer {
         $request_params = [ 'per_page' => 5, 'page' => $page, '_embed' => true ];
         $data = get_post_meta( $id );
         if ( false === $data ) {
+            
             return;
         }
 
@@ -194,7 +193,6 @@ class Importer {
         $URL = $URL . '/wp-json/wp/v2/posts/?' . http_build_query( $request_params );
 
         $response = wp_remote_get( $URL, [] );
-
         if ( ! is_wp_error( $response ) && is_array( $response ) ) {
             $max_pages = absint( $response[ 'headers' ][ 'x-wp-totalpages' ] );
             //echo "n/r";
@@ -288,6 +286,14 @@ class Importer {
                 }
                 if ( $category ) {
                     wp_set_object_terms( $post_inserted, [ absint( $category[0] ) ], 'category', false );
+                    
+                    /**
+                     * Add support to Yoast Primary Term
+                     */
+                    if ( class_exists( 'WPSEO_Primary_Term' ) ) {
+                        $primary_term_object = new \WPSEO_Primary_Term( 'category', $post_inserted );
+                        $primary_term_object->set_primary_term( absint( $category[0] ) );
+                    }
                 }
 
                 // set wpml post language
