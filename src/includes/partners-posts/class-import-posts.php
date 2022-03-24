@@ -185,9 +185,12 @@ class Importer {
             $URL = substr( $URL, 0, -1);
         }
         if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
-            if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ] ) {
+            if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ][0] ) {
                 $request_params[ 'lang' ] = $data[ "{$this->post_type}_remote_lang" ][0];
                 $this->lang = $data[ "{$this->post_type}_remote_lang" ][0];
+            }
+            if( ! $this->lang ) {
+                $this->lang = ICL_LANGUAGE_CODE;
             }
 		}
         $URL = $URL . '/wp-json/wp/v2/posts/?' . http_build_query( $request_params );
@@ -280,7 +283,7 @@ class Importer {
                     $this->upload_thumbnail( $post_inserted, $post['_embedded']['wp:featuredmedia'][0]['source_url'] );
                 }
                 if( taxonomy_exists( 'partner' ) ) {
-                    if( $partner_terms ) {
+                    if( $partner_terms && is_array( $partner_terms ) && is_object( $partner_terms[0] ) ) {
                         wp_set_object_terms( $post_inserted, [ $partner_terms[0]->term_id ], 'partner', true );
                     }
                 }
