@@ -313,6 +313,9 @@ class Partners_Sites {
     }
 
 	public function update_gettext( $translated_text, $untranslated_text, $domain ) {
+		if ( ! isset( $_GET[ 'post' ] ) || $this->post_type != get_post_type( (int) $_GET[ 'post' ] ) ) {
+			return $translated_text;
+		}
 		if ( $untranslated_text == 'Post updated.' ) {
 			return __( 'Site updated and synchronization process is running in the background.', 'jeo-mps' );
 		}
