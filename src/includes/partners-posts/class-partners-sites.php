@@ -22,10 +22,12 @@ class Partners_Sites {
 		add_filter( 'gettext', [ $this, 'update_gettext'], 10, 3 );
 	}
     public function save_categories_meta( $id, $site, $update ) {
-		if ( isset( $_POST[ '_partners_sites_local_category'] ) ) {
+		if ( isset( $_POST[ '_partners_sites_local_category'] ) && ! empty( $_POST[ '_partners_sites_local_category'] ) ) {
 			$category_slug = $_POST[ '_partners_sites_local_category'];
 			$category_object = get_term_by( 'slug', $category_slug, 'category', OBJECT );
-			update_post_meta( $id, $this->post_type. '_category', [ $category_object->term_id ], null );
+			if ( $category_object && is_object( $category_object ) ) {
+				update_post_meta( $id, $this->post_type. '_category', [ $category_object->term_id ], null );
+			}
 		}
 		
 	}
