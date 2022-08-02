@@ -1,4 +1,0 @@
-site_name: JEO
-nav:
-  - 'Home': index.md
-theme: readthedocs
