@@ -70,17 +70,17 @@ class Jeo_MPS {
 		$deps = array_merge( array( 'lodash' ), $asset_file['dependencies'] );
 
 		wp_register_script(
-			'jeo-js',
-			jeo_media_partners_BASEURL . '/js/build/postsSidebar.js',
+			'jeo-mps',
+			JEO_MEDIA_PARTNERS_BASEURL . '/js/build/postsSidebar.js',
 			$deps,
 			$asset_file['version']
 		);
 
-		wp_set_script_translations('jeo-js', 'jeo-mps', plugin_dir_path( __DIR__ ) . 'languages');
+		wp_set_script_translations('jeo-mps', 'jeo-mps', plugin_dir_path( __DIR__ ) . 'languages');
 
 
 		wp_localize_script(
-			'jeo-js',
+			'jeo-mps',
 			'jeo-mps',
 			array(
 				'ajax_url' => admin_url( 'admin-ajax.php' ),
