@@ -14,7 +14,7 @@
 		"url": "git+https://github.com/EarthJournalismNetwork/jeo-plugin.git"
 	},
 	"author": "",
-	"license": "ISC",
+	"license": "GPL-2.0-or-later",
 	"bugs": {
 		"url": "https://github.com/EarthJournalismNetwork/jeo-plugin/issues"
 	},
