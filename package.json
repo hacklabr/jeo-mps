@@ -21,8 +21,7 @@
 	"homepage": "https://github.com/EarthJournalismNetwork/jeo-plugin#readme",
 	"dependencies": {
 		"@wordpress/components": "^8.5.0",
-		"@wordpress/i18n": "^3.19.0",
-		"@wordpress/plugins": "^2.25.0"
+		"@wordpress/i18n": "^3.19.0"
 	},
 	"devDependencies": {
 		"@wordpress/scripts": "^6.2.0",

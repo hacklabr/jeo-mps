@@ -1,8 +1,6 @@
-import { render } from 'react-dom';
-import { Component, Fragment } from '@wordpress/element';
+import { Component, Fragment, render } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-//import { useSelect } from '@wordpress/data';
 
 /**
  * functions
@@ -13,11 +11,11 @@ const isValidHttpURL = ( siteURL ) => {
     try {
         testURL = new URL(siteURL);
     } catch (_) {
-        return false;  
+        return false;
     }
 
     return testURL.protocol === "http:" || testURL.protocol === "https:";
-  
+
 }
 const fetchCategories = () => {
     let siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
@@ -40,7 +38,7 @@ const fetchCategories = () => {
     }
     URL = URL + '/wp-json/wp/v2/categories/?per_page=100';
     if ( langValue != 'none' ) {
-        URL = URL + '&lang=' + langValue;   
+        URL = URL + '&lang=' + langValue;
     }
     fetch( URL )
     .then(response => {
@@ -52,7 +50,7 @@ const fetchCategories = () => {
         opt.value = '';
         opt.innerHTML = __( 'All Categories', 'jeo-mps' );
         selectField.appendChild(opt);
-        
+
         data.forEach( ( term ) => {
             let opt = document.createElement('option');
             opt.value = term.id;
@@ -64,19 +62,19 @@ const fetchCategories = () => {
             hiddenValueField.value = selectedValueId;
         } )
         hiddenValueField.value = selectedValueId;
-        categories = categories.concat( data ); 
+        categories = categories.concat( data );
 
         for (let i = 2; i <= totalPages ; i++){
             fetch( url + '&page=' + i)
             .then( response => { return response.json() } )
-            .then( data => {                
+            .then( data => {
                 data.forEach( ( term ) => {
                     let opt = document.createElement('option');
                     opt.value = term.id;
                     opt.innerHTML = term.name;
                     if ( term.id == selectedValueId ) {
                         opt.setAttribute( 'selected', 'selected' );
-                    }        
+                    }
                     selectField.appendChild(opt);
                 } )
                 hiddenValueField.value = selectedValueId;
@@ -136,14 +134,14 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         if ( dateField.value && dateField.value != '' ) {
             let format = JSON.parse( dateField.dataset.datepicker );
             let date = new Date( dateField.value );
-            
+
 
             URL = URL + '&after=' + date.toISOString();
-        } 
-        if ( langValue != 'none' ) {
-            URL = URL + '&lang=' + langValue;   
         }
-    
+        if ( langValue != 'none' ) {
+            URL = URL + '&lang=' + langValue;
+        }
+
         fetch( URL )
         .then( (response) => {
             if( ! response.ok) {
@@ -168,7 +166,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         .catch( (error) => {
             this.setState( { btnDisabled: false, httpResponse: __( 'The request for that partner is not ok: ' ) + error.message, isOpen: true, btnText: __( 'Preview Import and Save', 'jeo-mps' ) } );
         });
-          
+
     }
     save() {
 
@@ -204,7 +202,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
 					<Modal
 						title={ this.state.modalTitle }
 						onRequestClose={ () => this.setState( { isOpen: false } ) }
-					>   
+					>
                         { httpResponse && (
                             <div dangerouslySetInnerHTML={{ __html: httpResponse }} />
                         ) }
@@ -256,7 +254,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
 // remove unused wordpress ui things
 var css = '#edit-slug-box, #minor-publishing-actions, #misc-publishing-actions { display:none }',
 head = document.head || document.getElementsByTagName('head')[0],
-style = document.createElement('style');    
+style = document.createElement('style');
 head.appendChild(style);
 
 style.type = 'text/css';
@@ -284,11 +282,11 @@ document.addEventListener( 'DOMContentLoaded', () => {
         fetchCategories();
     })
     document.getElementById( '_partners_sites_remote_category_value' ).value = document.getElementById('_partners_sites_remote_category' ).value;
-    
+
     document.getElementById('_partners_sites_remote_category' ).addEventListener( 'change', () => {
         document.getElementById( '_partners_sites_remote_category_value' ).value = document.getElementById('_partners_sites_remote_category' ).value;
-    })    
+    })
     document.getElementById('_partners_sites_remote_lang' ).addEventListener( 'change', () => {
         fetchCategories();
-    })    
+    })
 });
