@@ -16,6 +16,7 @@ class Importer {
 
         add_action( $this->event, [ $this, 'run_cron'], 10, 2 );
     }
+
     /**
      * Add custom schedules interval
      *
@@ -31,6 +32,7 @@ class Importer {
         }
         return $schedules;
     }
+
     /**
      * Schedule cron for every single site (post) on save action
      *
@@ -59,14 +61,14 @@ class Importer {
             if ( 'disabled' != $interval ) {
                 $time = wp_next_scheduled( $this->event, $args );
                 wp_unschedule_event( $time, $this->event, $args );
-    
+
                 wp_schedule_event( time(), $interval, $this->event, $args );
             }
         }
-        // Run first import after save first time 
+        // Run first import after save first time
         // Run now if button Save and Run Now is clicked
         if ( ! $update || ( isset( $_POST[ 'run_import_now'] ) && 'true' == $_POST[ 'run_import_now'] )  ) {
-           
+
             //$modified_date = get_post_meta( $args[ 'id'], '_jeo_mps_last_update', true );
             $modified_date = 0;
             if ( ! $modified_date ) {
@@ -95,12 +97,12 @@ class Importer {
                 //do_action( $this->event, $args[ 'id'] );
 
                 remove_all_actions( "save_post_{$this->post_type}" );
-                wp_update_post( 
+                wp_update_post(
                     [
                         'ID'            => $args[ 'id' ],
                         'post_status'   => 'publish'
-                    ], 
-                    true, 
+                    ],
+                    true,
                     false
                 );
 
@@ -109,21 +111,23 @@ class Importer {
             do_action( $this->event, $args[ 'id'] );
             remove_all_actions( "save_post_{$this->post_type}" );
 
-            wp_update_post( 
+            wp_update_post(
                 [
                     'ID'            => $args[ 'id' ],
                     'post_status'   => 'publish'
-                ], 
-                true, 
-                false 
+                ],
+                true,
+                false
             );
         }
 
     }
+
     /**
-     * Undocumented function
+     * Set post thumbnail from image URL
      *
      * @param int $post_id
+	 * @param string $url
      * @return void
      */
     protected function upload_thumbnail( $post_id, $url ) {
@@ -136,9 +140,10 @@ class Importer {
         $file['tmp_name'] = download_url( $url );
 
         $image_id = media_handle_sideload( $file, $post_id );
-        
+
         set_post_thumbnail( $post_id, $image_id );
     }
+
     /**
      * Run cron / Perfome HTTP GET to Site api and save posts
      *
@@ -152,7 +157,7 @@ class Importer {
         $request_params = [ 'per_page' => 5, 'page' => $page, '_embed' => true ];
         $data = get_post_meta( $id );
         if ( false === $data ) {
-            
+
             return;
         }
 
@@ -178,21 +183,22 @@ class Importer {
                 if( $data[ "{$this->post_type}_remote_category_value" ][0] && is_numeric( $data[ "{$this->post_type}_remote_category_value" ][0] ) ) {
                     $request_params[ 'categories' ] = [ $data[ "{$this->post_type}_remote_category_value" ][0] ];
                 }
-            }    
+            }
         }
         $URL = $data[ "{$this->post_type}_site_url" ][0];
         if ( '/' === substr( $URL, -1) ) {
-            $URL = substr( $URL, 0, -1);
+			$URL = substr( $URL, 0, -1);
         }
         if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
-            if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ][0] ) {
+			if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ][0] ) {
                 $request_params[ 'lang' ] = $data[ "{$this->post_type}_remote_lang" ][0];
                 $this->lang = $data[ "{$this->post_type}_remote_lang" ][0];
             }
             if( ! $this->lang ) {
-                $this->lang = ICL_LANGUAGE_CODE;
+				$this->lang = ICL_LANGUAGE_CODE;
             }
 		}
+		$base_url = $URL;
         $URL = $URL . '/wp-json/wp/v2/posts/?' . http_build_query( $request_params );
 
         $response = wp_remote_get( $URL, [] );
@@ -202,7 +208,7 @@ class Importer {
             //var_dump( $max_pages );
             //var_dump( $response[ 'body'] );
 
-            $this->insert_posts( $response[ 'body'], $id );
+            $this->insert_posts( $response[ 'body'], $id, $base_url );
             if( '1' == $page && $max_pages > 1 ) {
                 for ($i = 2; $i <= $max_pages; $i++) {
                     // schedule an event to import every page
@@ -219,8 +225,9 @@ class Importer {
             update_post_meta( $id, '_jeo_mps_last_update', time() );
         }
     }
+
     /**
-     * 
+     *
      *
      * @param array $post
      * @return void
@@ -240,6 +247,49 @@ class Importer {
         }
         return $post[ 'yoast_head_json' ][ 'og_image'][0][ 'url' ];
     }
+
+	private function set_post_author( $post_id, $author ) {
+		$user = get_user_by( 'slug', $author[ 'slug' ] );
+
+		if ( !empty( $user ) ) {
+			wp_update_post( [ 'ID' => $post_id, 'post_author' => $user->ID ] );
+		} else {
+			global $coauthors_plus;
+			$coauthor = $coauthors_plus->get_coauthor_by( 'user_nicename', $author[ 'slug' ], true );
+
+			if( !empty( $coauthor ) ) {
+
+			} elseif( $coauthors_plus->is_guest_authors_enabled() ) {
+
+			}
+		}
+	}
+
+	private function get_authors( $base_url, $posts ) {
+		$user_ids = [];
+		foreach( $posts as $post) {
+			if( !in_array( $post[ 'author' ], $user_ids ) ) {
+				$user_ids[] = $post[ 'author' ];
+			}
+		}
+
+		$users_dict = [];
+
+		$request_params = [
+			'include' => implode( ',', $user_ids ),
+			'per_page' => count( $user_ids ),
+		];
+		$URL = $base_url . '/wp-json/wp/v2/users/?' . http_build_query( $request_params );
+		$response = wp_remote_get( $URL, [] );
+		if( !is_wp_error( $response ) && is_array( $response ) ) {
+			foreach( $response[ 'body' ] as $user ) {
+				$users_dict[ $user[ 'id' ] ] = $user;
+			}
+		}
+
+		return $users_dict;
+	}
+
     /**
      * Undocumented function
      *
@@ -247,12 +297,12 @@ class Importer {
      * @param [type] $id
      * @return void
      */
-    protected function insert_posts( $posts, $id ) {
+    protected function insert_posts( $posts, $id, $base_url ) {
         global $wpdb;
 
         $posts = json_decode( $posts, true );
         $category = get_post_meta( $id, $this->post_type. '_category', true );
-        
+
         if( taxonomy_exists( 'partner' ) ) {
             if( isset( $_POST[ '_partners_sites_newspack_partner'] ) ) {
                 $partner_term = get_term_by( 'slug', $_POST[ '_partners_sites_newspack_partner'], 'partner', OBJECT, 'raw' );
@@ -264,6 +314,8 @@ class Importer {
                 $partner_terms = false;
             }
         }
+
+		$users_dict = $this->get_authors( $base_url, $posts );
 
         foreach( $posts as $post ) {
             $partner_post_id = absint( $post[ 'id' ] );
@@ -280,14 +332,14 @@ class Importer {
                 'partner_post_id'       => $partner_post_id,
                 'importer_site_id'      => $id
             ];
-            
+
             // check if have jeo installed on target site
 
             if ( isset( $post['meta'][ '_related_point' ] ) && isset( $post['meta'][ '_related_point' ][0] ) ) {
                 $metadata[ '_related_point' ] = $post['meta'][ '_related_point' ][0];
                 $metadata[ '_related_point' ][ 'relevance'] = 'primary';
             }
-   
+
             $post_args = [
                 'post_title'        => $post[ 'title' ]['rendered'],
                 'post_excerpt'      => wp_strip_all_tags( $post[ 'excerpt' ]['rendered'] ),
@@ -298,7 +350,7 @@ class Importer {
                 'post_type'         => 'post',
             ];
             $post_inserted = wp_insert_post( $post_args, true, true );
-            
+
             if ( $post_inserted && ! is_wp_error( $post_inserted ) ) {
                 if ( isset( $post['_embedded'] ) && isset( $post['_embedded']['wp:featuredmedia'] ) ) {
                     if ( isset( $post['_embedded']['wp:featuredmedia'][0]['source_url'] ) ) {
@@ -313,6 +365,9 @@ class Importer {
                     }
 
                 }
+				if( !empty( $post[ 'author' ] ) ) {
+					$this->set_post_author( $post_inserted, $users_dict[ $post[ 'author' ] ] );
+				}
                 if( taxonomy_exists( 'partner' ) ) {
                     if( $partner_terms && is_array( $partner_terms ) && is_object( $partner_terms[0] ) ) {
                         wp_set_object_terms( $post_inserted, [ $partner_terms[0]->term_id ], 'partner', true );
@@ -320,7 +375,7 @@ class Importer {
                 }
                 if ( $category ) {
                     wp_set_object_terms( $post_inserted, [ absint( $category[0] ) ], 'category', false );
-                    
+
                     /**
                      * Add support to Yoast Primary Term
                      */
@@ -337,7 +392,7 @@ class Importer {
                         include_once( WP_PLUGIN_DIR . '/sitepress-multilingual-cms/inc/wpml-api.php' );
                     }
                     $trid = wpml_get_content_trid( 'post_post', $post_inserted );
-                      
+
                     // Update the post language info
                     $language_args = [
                         'element_id' => $post_inserted,
@@ -346,12 +401,13 @@ class Importer {
                         'language_code' => $this->lang,
                         'source_language_code' => null,
                     ];
-                 
+
                     do_action( 'wpml_set_element_language_details', $language_args );
-                
+
                 }
             }
         }
     }
 }
+
 $importer = \Jeo_MPS\Importer::get_instance();
