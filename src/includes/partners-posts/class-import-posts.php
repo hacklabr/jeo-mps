@@ -220,6 +220,27 @@ class Importer {
         }
     }
     /**
+     * 
+     *
+     * @param array $post
+     * @return void
+     */
+    protected function get_thumbnail_from_yoast( $post ) {
+        if( ! isset( $post[ 'yoast_head_json' ] ) ) {
+            return false;
+        }
+        if( ! isset( $post[ 'yoast_head_json' ][ 'og_image'] ) ) {
+            return false;
+        }
+        if( ! isset( $post[ 'yoast_head_json' ][ 'og_image'][0] ) ) {
+            return false;
+        }
+        if( ! isset( $post[ 'yoast_head_json' ][ 'og_image'][0][ 'url' ] ) ) {
+            return false;
+        }
+        return $post[ 'yoast_head_json' ][ 'og_image'][0][ 'url' ];
+    }
+    /**
      * Undocumented function
      *
      * @param [type] $posts
@@ -279,8 +300,18 @@ class Importer {
             $post_inserted = wp_insert_post( $post_args, true, true );
             
             if ( $post_inserted && ! is_wp_error( $post_inserted ) ) {
-                if ( isset( $post['_embedded'] ) && isset( $post['_embedded']['wp:featuredmedia'] ) ){
-                    $this->upload_thumbnail( $post_inserted, $post['_embedded']['wp:featuredmedia'][0]['source_url'] );
+                if ( isset( $post['_embedded'] ) && isset( $post['_embedded']['wp:featuredmedia'] ) ) {
+                    if ( isset( $post['_embedded']['wp:featuredmedia'][0]['source_url'] ) ) {
+
+                        $this->upload_thumbnail( $post_inserted, $post['_embedded']['wp:featuredmedia'][0]['source_url'] );
+
+                    } else {
+                        $yoast_image = $this->get_thumbnail_from_yoast( $post );
+                        if ( $yoast_image ) {
+                            $this->upload_thumbnail( $post_inserted, $yoast_image );
+                        }
+                    }
+
                 }
                 if( taxonomy_exists( 'partner' ) ) {
                     if( $partner_terms && is_array( $partner_terms ) && is_object( $partner_terms[0] ) ) {

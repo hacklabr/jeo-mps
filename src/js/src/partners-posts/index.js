@@ -112,6 +112,24 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         window.JeoPartnersPreviewButtonObj.setState( { btnDisabled: false } );
 
     }
+    getThumbnail( item ) {
+        if( typeof item['_embedded']['wp:featuredmedia'][0][ 'source_url'] == 'undefined' ) {
+            if ( typeof item['yoast_head_json'] == 'undefined' ) {
+                return '';
+            }
+            if ( typeof item['yoast_head_json'][ 'og_image'] == 'undefined' ) {
+                return '';
+            }
+            if ( typeof item['yoast_head_json'][ 'og_image'][0] == 'undefined' ) {
+                return '';
+            }
+            if ( typeof item['yoast_head_json'][ 'og_image'][0][ 'url' ] == 'undefined' ) {
+                return '';
+            }
+            return item['yoast_head_json'][ 'og_image'][0][ 'url' ];
+        }
+        return item['_embedded']['wp:featuredmedia'][0][ 'source_url'];
+    }
     loadTest() {
         let selectField = document.getElementById('_partners_sites_remote_category' );
         let dateField = document.getElementById('_partners_sites_date' );
@@ -219,10 +237,11 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
                                             <h4>{ __( 'Title', 'jeo-mps' ) }</h4>
                                             <p>{item.title.rendered}</p>
                                         </div>
-                                        { typeof item['_embedded']['wp:featuredmedia'] !== 'undefined' && (
+                                        { this.getThumbnail( item ) != '' && (
                                             <div className="preview-post__image" style={{width:'100%',textAlign:'center'}}>
                                                 <h4>{ __( 'Featured Image', 'jeo-mps' ) }</h4>
-                                                <img style={{width:'20vw', display:'inline'}} src={ item['_embedded']['wp:featuredmedia'][0]['source_url'] } />
+                                                
+                                                <img style={{width:'20vw', display:'inline'}} src={ this.getThumbnail( item ) } />
                                             </div>
                                         )}
 

@@ -6,7 +6,7 @@
  * A class definition that includes attributes and functions used across both the
  * public-facing side of the site and the admin area.
  *
- * @link       leo.com
+ * @link       hacklab/
  * @since      1.0.0
  *
  * @package    Jeo
@@ -25,7 +25,7 @@
  * @since      0.1
  * @package    Jeo Media Partners Sync
  * @subpackage Jeo Media Partners Sync/includes
- * @author     Leo <leo@Leo.leo>
+ * @author     Hacklab/ <hacklab@hacklab.com.br>
  */
 class Jeo_MPS {
 
