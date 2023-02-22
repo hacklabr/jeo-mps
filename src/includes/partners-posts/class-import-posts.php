@@ -3,13 +3,13 @@ namespace Jeo_MPS;
 
 class Importer {
 
-	use Singleton;
+    use Singleton;
 
-	public $post_type = '_partners_sites';
+    public $post_type = '_partners_sites';
     public $event = 'jeo_media_partners_import_posts';
     public $lang = false;
 
-	protected function init() {
+    protected function init() {
         add_filter( 'cron_schedules', [ $this, 'cron_schedules' ] );
 
         add_action( "save_post_{$this->post_type}", [ $this, 'schedule_cron' ], 9999, 3 );
@@ -127,7 +127,7 @@ class Importer {
      * Set post thumbnail from image URL
      *
      * @param int $post_id
-	 * @param string $url
+     * @param string $url
      * @return void
      */
     protected function upload_thumbnail( $post_id, $url ) {
@@ -187,18 +187,18 @@ class Importer {
         }
         $URL = $data[ "{$this->post_type}_site_url" ][0];
         if ( '/' === substr( $URL, -1) ) {
-			$URL = substr( $URL, 0, -1);
+            $URL = substr( $URL, 0, -1);
         }
         if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
-			if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ][0] ) {
+            if ( isset( $data[ "{$this->post_type}_remote_lang" ] ) && 'none' != $data[ "{$this->post_type}_remote_lang" ][0] ) {
                 $request_params[ 'lang' ] = $data[ "{$this->post_type}_remote_lang" ][0];
                 $this->lang = $data[ "{$this->post_type}_remote_lang" ][0];
             }
             if( ! $this->lang ) {
-				$this->lang = ICL_LANGUAGE_CODE;
+                $this->lang = ICL_LANGUAGE_CODE;
             }
-		}
-		$base_url = $URL;
+        }
+        $base_url = $URL;
         $URL = $URL . '/wp-json/wp/v2/posts/?' . http_build_query( $request_params );
 
         $response = wp_remote_get( $URL, [] );
@@ -248,47 +248,77 @@ class Importer {
         return $post[ 'yoast_head_json' ][ 'og_image'][0][ 'url' ];
     }
 
-	private function set_post_author( $post_id, $author ) {
-		$user = get_user_by( 'slug', $author[ 'slug' ] );
+    private function upload_avatar( $url ) {
+        $filename = basename( $url );
+        $file = wp_upload_bits( $filename, null, @file_get_contents( $url ) );
 
-		if ( !empty( $user ) ) {
-			wp_update_post( [ 'ID' => $post_id, 'post_author' => $user->ID ] );
-		} else {
-			global $coauthors_plus;
-			$coauthor = $coauthors_plus->get_coauthor_by( 'user_nicename', $author[ 'slug' ], true );
+        if( !$file[ 'error' ] ) {
+            $filetype = wp_check_filetype( $filename, null );
 
-			if( !empty( $coauthor ) ) {
+            $attachment = [
+                'post_mime_type' => $filetype[ 'type' ],
+                'post_status' => 'publish',
+            ];
 
-			} elseif( $coauthors_plus->is_guest_authors_enabled() ) {
+            $attachment_id = wp_insert_attachment( $attachment, $file[ 'file' ] );
 
-			}
-		}
-	}
+            if( !is_wp_error( $attachment_id ) ) {
+                $attachment_meta = wp_generate_attachment_metadata( $attachment_id, $file[ 'file' ] );
+				wp_update_attachment_metadata( $attachment_id, $attachment_meta );
+            }
 
-	private function get_authors( $base_url, $posts ) {
-		$user_ids = [];
-		foreach( $posts as $post) {
-			if( !in_array( $post[ 'author' ], $user_ids ) ) {
-				$user_ids[] = $post[ 'author' ];
-			}
-		}
+			return $attachment_id;
+        }
+    }
 
-		$users_dict = [];
+    private function set_post_author( $post_id, $author ) {
+        $user = get_user_by( 'slug', $author[ 'slug' ] );
 
-		$request_params = [
-			'include' => implode( ',', $user_ids ),
-			'per_page' => count( $user_ids ),
-		];
-		$URL = $base_url . '/wp-json/wp/v2/users/?' . http_build_query( $request_params );
-		$response = wp_remote_get( $URL, [] );
-		if( !is_wp_error( $response ) && is_array( $response ) ) {
-			foreach( $response[ 'body' ] as $user ) {
-				$users_dict[ $user[ 'id' ] ] = $user;
-			}
-		}
+        if ( !empty( $user ) ) {
+            wp_update_post( [ 'ID' => $post_id, 'post_author' => $user->ID ] );
+        } else {
+            global $coauthors_plus;
+            $coauthor = $coauthors_plus->get_coauthor_by( 'user_nicename', $author[ 'slug' ], true );
 
-		return $users_dict;
-	}
+            if( !empty( $coauthor ) ) {
+                $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
+            } elseif( $coauthors_plus->is_guest_authors_enabled() ) {
+				/*
+                $coauthor = $coauthors_plus->guest_authors->create( [
+                    'display_name' => $author[ 'name' ],
+                    'user_login' => $author[ 'slug' ] . '@jeo-mps.localhost',
+                    'description' => $author[ 'description' ],
+					'avatar' => $this->upload_avatar( $author[ 'avatar_urls' ][ '96' ] ),
+                ] );
+				*/
+            }
+        }
+    }
+
+    private function get_authors( $base_url, $posts ) {
+        $user_ids = [];
+        foreach( $posts as $post) {
+            if( !in_array( $post[ 'author' ], $user_ids ) ) {
+                $user_ids[] = $post[ 'author' ];
+            }
+        }
+
+        $users_dict = [];
+
+        $request_params = [
+            'include' => implode( ',', $user_ids ),
+            'per_page' => count( $user_ids ),
+        ];
+        $URL = $base_url . '/wp-json/wp/v2/users/?' . http_build_query( $request_params );
+        $response = wp_remote_get( $URL, [] );
+        if( !is_wp_error( $response ) && is_array( $response ) ) {
+            foreach( $response[ 'body' ] as $user ) {
+                $users_dict[ $user[ 'id' ] ] = $user;
+            }
+        }
+
+        return $users_dict;
+    }
 
     /**
      * Undocumented function
@@ -315,7 +345,7 @@ class Importer {
             }
         }
 
-		$users_dict = $this->get_authors( $base_url, $posts );
+        $users_dict = $this->get_authors( $base_url, $posts );
 
         foreach( $posts as $post ) {
             $partner_post_id = absint( $post[ 'id' ] );
@@ -365,9 +395,9 @@ class Importer {
                     }
 
                 }
-				if( !empty( $post[ 'author' ] ) ) {
-					$this->set_post_author( $post_inserted, $users_dict[ $post[ 'author' ] ] );
-				}
+                if( !empty( $post[ 'author' ] ) ) {
+                    $this->set_post_author( $post_inserted, $users_dict[ $post[ 'author' ] ] );
+                }
                 if( taxonomy_exists( 'partner' ) ) {
                     if( $partner_terms && is_array( $partner_terms ) && is_object( $partner_terms[0] ) ) {
                         wp_set_object_terms( $post_inserted, [ $partner_terms[0]->term_id ], 'partner', true );
