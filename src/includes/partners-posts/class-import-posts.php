@@ -295,31 +295,6 @@ class Importer {
         }
     }
 
-    private function get_authors( $base_url, $posts ) {
-        $user_ids = [];
-        foreach( $posts as $post) {
-            if( !in_array( $post[ 'author' ], $user_ids ) ) {
-                $user_ids[] = $post[ 'author' ];
-            }
-        }
-
-        $users_dict = [];
-
-        $request_params = [
-            'include' => implode( ',', $user_ids ),
-            'per_page' => count( $user_ids ),
-        ];
-        $URL = $base_url . '/wp-json/wp/v2/users/?' . http_build_query( $request_params );
-        $response = wp_remote_get( $URL, [] );
-        if( !is_wp_error( $response ) && is_array( $response ) ) {
-            foreach( $response[ 'body' ] as $user ) {
-                $users_dict[ $user[ 'id' ] ] = $user;
-            }
-        }
-
-        return $users_dict;
-    }
-
     /**
      * Undocumented function
      *
@@ -344,8 +319,6 @@ class Importer {
                 $partner_terms = false;
             }
         }
-
-        $users_dict = $this->get_authors( $base_url, $posts );
 
         foreach( $posts as $post ) {
             $partner_post_id = absint( $post[ 'id' ] );
@@ -395,8 +368,8 @@ class Importer {
                     }
 
                 }
-                if( !empty( $post[ 'author' ] ) ) {
-                    $this->set_post_author( $post_inserted, $users_dict[ $post[ 'author' ] ] );
+                if ( isset( $post['_embedded'] ) && isset( $post['_embedded']['author'] ) ) {
+                    $this->set_post_author( $post_inserted, $post['_embedded']['author'] );
                 }
                 if( taxonomy_exists( 'partner' ) ) {
                     if( $partner_terms && is_array( $partner_terms ) && is_object( $partner_terms[0] ) ) {
