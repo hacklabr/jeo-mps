@@ -264,10 +264,10 @@ class Importer {
 
             if( !is_wp_error( $attachment_id ) ) {
                 $attachment_meta = wp_generate_attachment_metadata( $attachment_id, $file[ 'file' ] );
-				wp_update_attachment_metadata( $attachment_id, $attachment_meta );
+                wp_update_attachment_metadata( $attachment_id, $attachment_meta );
             }
 
-			return $attachment_id;
+            return $attachment_id;
         }
     }
 
@@ -283,14 +283,14 @@ class Importer {
             if( !empty( $coauthor ) ) {
                 $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
             } elseif( $coauthors_plus->is_guest_authors_enabled() ) {
-				/*
-                $coauthor = $coauthors_plus->guest_authors->create( [
+                $coauthor_id = $coauthors_plus->guest_authors->create( [
                     'display_name' => $author[ 'name' ],
                     'user_login' => $author[ 'slug' ] . '@jeo-mps.localhost',
                     'description' => $author[ 'description' ],
-					'avatar' => $this->upload_avatar( $author[ 'avatar_urls' ][ '96' ] ),
+                    'avatar' => $this->upload_avatar( $author[ 'avatar_urls' ][ '96' ] ),
                 ] );
-				*/
+                $coauthor = $coauthors_plus->get_coauthor_by( 'id', $coauthor_id );
+                $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
             }
         }
     }
