@@ -284,6 +284,7 @@ class Importer {
                 $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
             } elseif( $coauthors_plus->is_guest_authors_enabled() ) {
                 $coauthor_id = $coauthors_plus->guest_authors->create( [
+					/* `display_name` and `user_login` are required */
                     'display_name' => $author[ 'name' ],
                     'user_login' => $author[ 'slug' ] . '@jeo-mps.localhost',
                     'description' => $author[ 'description' ],
