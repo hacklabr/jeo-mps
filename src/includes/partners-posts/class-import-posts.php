@@ -305,7 +305,7 @@ class Importer {
 	}
 
     private function set_post_authors( $post_id, $authors ) {
-		if( is_array( $authors ) && array_is_list( $authors ) ) {
+		if( is_array( $authors ) && ( array_values( $authors ) === $authors ) ) {
 			foreach( $authors as $author ) {
 				$this->set_post_author( $post_id, $author );
 			}
