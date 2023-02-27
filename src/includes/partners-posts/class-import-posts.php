@@ -152,7 +152,6 @@ class Importer {
      */
     public function run_cron( $id, $page = '1' ) {
         global $wpdb;
-        //var_dump( $id );
 
         $request_params = [ 'per_page' => 5, 'page' => $page, '_embed' => true ];
         $data = get_post_meta( $id );
@@ -271,7 +270,7 @@ class Importer {
         }
     }
 
-    private function set_post_author( $post_id, $author ) {
+	private function set_post_author( $post_id, $author){
         $user = get_user_by( 'slug', $author[ 'slug' ] );
 
         if ( !empty( $user ) ) {
@@ -279,21 +278,40 @@ class Importer {
         } else {
             global $coauthors_plus;
             $coauthor = $coauthors_plus->get_coauthor_by( 'user_nicename', $author[ 'slug' ], true );
+            $user_id = get_current_user_id();
 
-            if( !empty( $coauthor ) ) {
-                $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
-            } elseif( $coauthors_plus->is_guest_authors_enabled() ) {
-                $coauthor_id = $coauthors_plus->guest_authors->create( [
-					/* `display_name` and `user_login` are required */
-                    'display_name' => $author[ 'name' ],
-                    'user_login' => $author[ 'slug' ],
-                    'description' => $author[ 'description' ],
-                    'avatar' => $this->upload_avatar( $author[ 'avatar_urls' ][ '96' ] ),
-                ] );
-                $coauthor = $coauthors_plus->get_coauthor_by( 'id', $coauthor_id );
-                $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
+            try {
+                wp_set_current_user( 1 );
+
+                if( !empty( $coauthor ) ) {
+                    $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
+                } elseif( $coauthors_plus->is_guest_authors_enabled() ) {
+                    $coauthor_id = $coauthors_plus->guest_authors->create( [
+                        /* `display_name` and `user_login` are required */
+                        'display_name' => $author[ 'name' ],
+                        'user_login' => $author[ 'slug' ],
+                        'description' => $author[ 'description' ],
+                        'avatar' => $this->upload_avatar( $author[ 'avatar_urls' ][ '96' ] ),
+                    ] );
+                    $coauthor = $coauthors_plus->get_coauthor_by( 'id', $coauthor_id );
+                    $coauthors_plus->add_coauthors( $post_id, [ $coauthor->user_nicename ], false, 'user_nicename' );
+                }
+            } catch (\Exception $err) {
+                error_log($err->getMessage());
+            } finally {
+                wp_set_current_user( $user_id );
             }
         }
+	}
+
+    private function set_post_authors( $post_id, $authors ) {
+		if( is_array( $authors ) && array_is_list( $authors ) ) {
+			foreach( $authors as $author ) {
+				$this->set_post_author( $post_id, $author );
+			}
+		} else {
+			$this->set_post_author( $post_id, $authors );
+		}
     }
 
     /**
@@ -370,7 +388,7 @@ class Importer {
 
                 }
                 if ( isset( $post['_embedded'] ) && isset( $post['_embedded']['author'] ) ) {
-                    $this->set_post_author( $post_inserted, $post['_embedded']['author'] );
+                    $this->set_post_authors( $post_inserted, $post['_embedded']['author'] );
                 }
                 if( taxonomy_exists( 'partner' ) ) {
                     if( $partner_terms && is_array( $partner_terms ) && is_object( $partner_terms[0] ) ) {
