@@ -1,0 +1,18 @@
+.preview-posts__posts {
+	display: grid;
+	gap: 1rem 2rem;
+	grid-template-columns: auto 1fr auto;
+	margin: 2rem 0;
+}
+.preview-posts__header, .preview-posts__post {
+	display: contents;
+}
+.preview-posts__header {
+	font-weight: bold;
+}
+.preview-posts__post img {
+	aspect-ratio: 16 / 9;
+	height: auto;
+	object-fit: cover;
+	width: 20vw;
+}

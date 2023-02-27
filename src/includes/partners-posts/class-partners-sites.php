@@ -29,7 +29,7 @@ class Partners_Sites {
 				update_post_meta( $id, $this->post_type. '_category', [ $category_object->term_id ], null );
 			}
 		}
-		
+
 	}
 
 	public function remove_metaboxes() {
@@ -38,7 +38,7 @@ class Partners_Sites {
 		if( ! is_array( $wp_meta_boxes ) ) {
 			return;
 		}
-		
+
 		if( isset( $wp_meta_boxes[$this->post_type] ) && is_array( $wp_meta_boxes[$this->post_type] ) ) {
 			foreach( $wp_meta_boxes[$this->post_type] as $position => $content ) {
 				if( $wp_meta_boxes[$this->post_type][ $position ] && is_array( $wp_meta_boxes[$this->post_type][ $position ] ) && ! empty( $wp_meta_boxes[$this->post_type][ $position ] ) ) {
@@ -99,7 +99,7 @@ class Partners_Sites {
 				'menu_position' => 999,
 				'has_archive' => false,
 				'exclude_from_search' => true,
-			);	
+			);
 		} else {
 			$labels[ 'menu_name' ] = __( 'JEO Partners Sites Sync', 'jeo-mps' );
 			$args = array(
@@ -117,7 +117,7 @@ class Partners_Sites {
 				'exclude_from_search' => true,
 				'show_in_nav_menus' 	=> false,
 				'show_in_admin_bar' 	=> false,
-				'publicly_queryable'	=> false, 
+				'publicly_queryable'	=> false,
 			);
 		}
 
@@ -142,6 +142,13 @@ class Partners_Sites {
 			$asset_file['version']
 		);
 
+		wp_enqueue_style(
+			'jeo-partners-posts',
+			JEO_MEDIA_PARTNERS_BASEURL . '/css/partnersPosts.css',
+			[],
+			$asset_file['version']
+		);
+
 		wp_set_script_translations( 'jeo-partners-posts', 'jeo-mps', plugin_dir_path(  dirname( __FILE__ , 2 ) ) . 'languages' );
 
 	}
@@ -154,11 +161,11 @@ class Partners_Sites {
 		}
 		if ( '/wp-admin/post.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != $_REQUEST[ 'post_type' ] ) {
 			return;
-		} 
+		}
 		if ( '/wp-admin/post-new.php' == $_SERVER[ 'PHP_SELF' ]  && $this->post_type != $_GET[ 'post_type' ] ) {
 			return;
-		} 
-		
+		}
+
 		$prefix = $this->post_type;
 		$post_id = false;
 		if ( isset( $_GET[ 'post'] ) && ! empty( $_GET[ 'post'] ) ) {
@@ -172,7 +179,7 @@ class Partners_Sites {
 			'context'      => 'advanced',
 			'priority'     => 'high',
 		) );
-	
+
 		$site_info_box->add_field( array(
 			'name' => __( 'Site URL', 'jeo-mps' ),
 			'id' => $prefix . '_site_url',
@@ -193,7 +200,7 @@ class Partners_Sites {
 				'show_option_none' 	=> false,
 				'options'			=> $options,
 			) );
-	
+
 	   	}
 		$site_info_box->add_field( array(
 			'name' 				=> __( 'Get posts from a specific category', 'jeo-mps' ),
@@ -211,14 +218,14 @@ class Partners_Sites {
         ) );
 		$current_remote_category = '';
 		if ( $post_id ) {
-			$current_remote_category = wp_get_post_categories( $post_id, [ 'fields' => 'ids' ] ); 
+			$current_remote_category = wp_get_post_categories( $post_id, [ 'fields' => 'ids' ] );
 		}
 		$site_info_box->add_field( array(
 			'id'   		=> $prefix . '_remote_category_value',
 			'type' 		=> 'hidden',
 			'default' 	=> $current_remote_category,
 		) );
-		
+
 
 
 		$site_info_box->add_field( array(
@@ -250,16 +257,16 @@ class Partners_Sites {
 			'context'      => 'advanced',
 			'priority'     => 'high',
 		) );
-		
+
 		if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
 			global $sitepress;
-		
+
 			// remove WPML term filters
 			remove_filter('get_terms_args', array($sitepress, 'get_terms_args_filter'));
 			remove_filter('get_term', array($sitepress,'get_term_adjust_id'));
 			remove_filter('terms_clauses', array($sitepress,'terms_clauses'));
 		}
-		
+
  		$post_config_box->add_field( array(
 			'name' 				=> __( 'Post category on your site', 'jeo-mps' ),
 			'id' 				=> $prefix . '_local_category',
@@ -272,7 +279,7 @@ class Partners_Sites {
 				'id' 				=> $prefix . '_newspack_partner',
 				'taxonomy'			=> 'partner',
 				'type'				=> 'taxonomy_select',
-			) );	
+			) );
 		}
 	}
 	/**
@@ -285,7 +292,7 @@ class Partners_Sites {
 		foreach ($roles as $role) {
 
 			// var_dump($role);
-			
+
 			$role_obj = get_role($role);
 
 			$role_obj->add_cap( 'edit_partner_site' );
@@ -309,7 +316,7 @@ class Partners_Sites {
 		unset($actions['edit']);
 		unset($actions['trash']);
 		unset($actions['view']);
-		unset($actions['inline hide-if-no-js']);   
+		unset($actions['inline hide-if-no-js']);
         unset( $actions['inline'] );
         return $actions;
     }

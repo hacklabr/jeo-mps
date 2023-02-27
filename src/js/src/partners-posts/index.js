@@ -88,8 +88,8 @@ const fetchCategories = () => {
 
 
 const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Component {
-	constructor() {
-		super();
+    constructor() {
+        super();
 
         let btnDisabled = true;
         window.JeoPartnersPreviewButtonObj = this;
@@ -97,15 +97,15 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         if ( this.siteURLInput && this.siteURLInput.value && this.siteURLInput.value != '' ) {
             btnDisabled = false;
         }
-		this.state = {
-			isOpen: false,
+        this.state = {
+            isOpen: false,
             btnDisabled: btnDisabled,
             btnText: __( 'Preview Import and Save', 'jeo-mps' ),
             html: '',
             httpResponse: false,
             responseData: false,
             modalTitle: __('Preview Import', 'jeo-mps' )
-		};
+        };
         this.siteURLInput.addEventListener( 'change', () => { JeoPartnersPreviewButtonObj.changeURL() } );
     }
     changeURL() {
@@ -195,60 +195,62 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         document.getElementById( 'run_import_now' ).value = 'true';
         document.getElementById( 'post' ).submit();
     }
-	render() {
-		const isOpen = this.state.isOpen;
-		const btnDisabled = this.state.btnDisabled;
-		const httpResponse = this.state.httpResponse;
-		const responseData = this.state.responseData;
+    render() {
+        const isOpen = this.state.isOpen;
+        const btnDisabled = this.state.btnDisabled;
+        const httpResponse = this.state.httpResponse;
+        const responseData = this.state.responseData;
 
         const siteURL = false;
 
-		return (
-			<Fragment>
+        return (
+            <Fragment>
                 {btnDisabled && (
-				    <Button isPrimary disabled>
-					    { this.state.btnText }
-				    </Button>
+                    <Button variant="primary" disabled>
+                        { this.state.btnText }
+                    </Button>
                 ) }
                 { btnDisabled == false && (
-				    <Button isPrimary disable onClick={ () => this.loadTest()  }>
-					    { this.state.btnText }
-				    </Button>
+                    <Button variant="primary" disable onClick={ () => this.loadTest()  }>
+                        { this.state.btnText }
+                    </Button>
                 ) }
 
-				{ isOpen && (
-					<Modal
-						title={ this.state.modalTitle }
-						onRequestClose={ () => this.setState( { isOpen: false } ) }
-					>
+                { isOpen && (
+                    <Modal
+                        title={ this.state.modalTitle }
+                        onRequestClose={ () => this.setState( { isOpen: false } ) }
+                    >
                         { httpResponse && (
                             <div dangerouslySetInnerHTML={{ __html: httpResponse }} />
                         ) }
                         { responseData && (
-                            <div className="preview-post">
+                            <div className="preview-posts">
                                 <div className="preview-save">
-                                    <Button isPrimary disable onClick={ () => this.runNow() }>
+                                    <Button variant="primary" disable onClick={ () => this.runNow() }>
                                         { __( 'Save and run now', 'jeo-mps' )}
                                     </Button>
                                 </div>
-                                { responseData.map(item => (
-                                    <Fragment>
-                                        <div className="preview-post__title">
-                                            <h4>{ __( 'Title', 'jeo-mps' ) }</h4>
-                                            <p>{item.title.rendered}</p>
-                                        </div>
-                                        { this.getThumbnail( item ) != '' && (
-                                            <div className="preview-post__image" style={{width:'100%',textAlign:'center'}}>
-                                                <h4>{ __( 'Featured Image', 'jeo-mps' ) }</h4>
-                                                
-                                                <img style={{width:'20vw', display:'inline'}} src={ this.getThumbnail( item ) } />
+                                <div className="preview-posts__posts">
+                                    <div class="preview-posts__header">
+                                            <div>{ __( 'Featured image', 'jeo-mps' ) }</div>
+                                            <div style={ { maxWidth: '60%' } }>{ __( 'Title', 'jeo-mps' ) }</div>
+                                            <div>{ __( 'Author', 'jeo-mps' ) }</div>
+                                    </div>
+                                    { responseData.map(item => (
+                                        <article className="preview-posts__post">
+											<div>
+                                            { this.getThumbnail( item ) != '' && (
+                                                <img height="90" width="160" src={ this.getThumbnail( item ) } />
+                                            )}
                                             </div>
-                                        )}
-
-                                    </Fragment>
-                                )) }
+                                            <div><a href={ item.link } target="_blank" dangerouslySetInnerHTML={ { __html: item.title.rendered } } /></div>
+											<div>{ item._embedded.author.map(author => author.name).join(', ') }</div>
+                                        </article>
+                                    )) }
+                                </div>
                                 <div className="preview-save">
-                                    <Button isPrimary disable onClick={ () => this.runNow() }>
+                                    <Button variant="primary" disable onClick={ () => this.runNow() }>
                                         { __( 'Save and run now', 'jeo-mps' )}
                                     </Button>
                                 </div>
@@ -257,17 +259,17 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
                         { ! responseData && (
                             <div className="preview-save">
                                 <br></br>
-                                <Button isPrimary disable onClick={ () => this.save() }>
+                                <Button variant="primary" disable onClick={ () => this.save() }>
                                     { __( 'Save anyway', 'jeo-mps' )}
                                 </Button>
                             </div>
                         )}
 
-					</Modal>
-				) }
-			</Fragment>
-		);
-	}
+                    </Modal>
+                ) }
+            </Fragment>
+        );
+    }
 };
 
 // remove unused wordpress ui things
