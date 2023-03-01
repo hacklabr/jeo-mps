@@ -396,14 +396,17 @@ class Importer {
                     }
                 }
                 if ( $category ) {
-                    wp_set_object_terms( $post_inserted, [ absint( $category[0] ) ], 'category', false );
+					$category_id = absint( $category[0] );
+					$category_id = apply_filters( 'wpml_object_id', $category_id, 'category', true, $this->lang );
+
+                    wp_set_object_terms( $post_inserted, [ $category_id ], 'category', false );
 
                     /**
                      * Add support to Yoast Primary Term
                      */
                     if ( class_exists( 'WPSEO_Primary_Term' ) ) {
                         $primary_term_object = new \WPSEO_Primary_Term( 'category', $post_inserted );
-                        $primary_term_object->set_primary_term( absint( $category[0] ) );
+                        $primary_term_object->set_primary_term( $category_id );
                     }
                 }
 
