@@ -23,14 +23,14 @@ trait Singleton {
 
 	}
 
-	private function __wakeup() {
+	public function __wakeup() {
 
 	}
 
-	/** 
-	* Check if 'edit' or 'new-post' screen of a 
+	/**
+	* Check if 'edit' or 'new-post' screen of a
  	* given post type is opened
-	* 
+	*
  	* @param null $post_type name of post type to compare
  	*
  	* @return bool true or false
@@ -85,8 +85,8 @@ trait Singleton {
 	public function get_all_langs_names( $lang = 'en' ){
 		global $wpdb;
 		$lang_data = array();
-		$languages = $wpdb->get_results( 
-			$wpdb->prepare( 
+		$languages = $wpdb->get_results(
+			$wpdb->prepare(
 				"SELECT code, english_name, active, tag, name
 				FROM {$wpdb->prefix}icl_languages lang
 				INNER JOIN {$wpdb->prefix}icl_languages_translations trans
