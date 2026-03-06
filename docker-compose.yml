@@ -2,7 +2,7 @@ version: '2'
 
 services:
   mariadb:
-    image: mariadb:10.4
+    image: mariadb:12
     volumes:
       - ./mariadb_data:/var/lib/mysql
       - ./docker/mariadb/data:/docker-entrypoint-initdb.d
@@ -11,7 +11,7 @@ services:
       MYSQL_DATABASE: wordpress
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
-      
+
   wordpress:
     build:
       context: .
@@ -21,31 +21,17 @@ services:
     depends_on:
       - mariadb
     environment:
+      MARIADB_AUTO_UPGRADE: 1
       WORDPRESS_DB_HOST: mariadb
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
-      WORDPRESS_DEBUG: 'true'
-      INFOAMAZONIAAPIKEY: ${INFOAMAZONIAAPIKEY}
-      MAPBOXAPIKEY: ${MAPBOXAPIKEY}
+      WORDPRESS_DEBUG: 1
     volumes:
       - ./src:/var/www/html/wp-content/plugins/jeo-mps
       - ./wp-content:/var/www/html/wp-content
       - ./docker/mariadb/data:/docker-entrypoint-initdb.d
       - ./docker/wordpress/.htaccess:/var/www/html/.htaccess
-  phpmyadmin:
-    depends_on:
-      - mariadb
-    image: phpmyadmin/phpmyadmin
-    restart: always
-    ports:
-      - '8080:80'
-    environment:
-      - PMA_HOST=mariadb
-      - MYSQL_ROOT_PASSWORD=therootpassword
-      - MYSQL_USER=wordpress
-      - MYSQL_DATABASE=wordpress
-      - MYSQL_PASSWORD=wordpress
-      
+
   watcher:
     build:
       context: .

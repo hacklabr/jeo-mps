@@ -1,11 +1,8 @@
-FROM wordpress
+FROM hacklab/wp:php-8.3
 
-RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
-	chmod +x wp-cli.phar && \
-	mv wp-cli.phar /usr/local/bin/wp
+LABEL mantainer "hacklab/ <contato@hacklab.com.br>"
 
-COPY docker/wordpress/entrypoint.sh /entrypoint.sh
+USER www-data
 
-RUN sed -i '$ d' /usr/local/bin/docker-entrypoint.sh
-
-RUN cat /entrypoint.sh >> /usr/local/bin/docker-entrypoint.sh
+# Fix file permissions
+USER root

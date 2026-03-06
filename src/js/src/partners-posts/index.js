@@ -18,15 +18,15 @@ const isValidHttpURL = ( siteURL ) => {
 
 }
 const fetchCategories = () => {
-    let siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
+    const siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
     let URL = siteURLInput.value;
     let categories = [];
-    let selectField = document.getElementById('_partners_sites_remote_category' );
-    let hiddenValueField = document.getElementById('_partners_sites_remote_category_value' );
-    let selectedValueId = hiddenValueField.value;
+    const selectField = document.getElementById('_partners_sites_remote_category' );
+    const hiddenValueField = document.getElementById('_partners_sites_remote_category_value' );
+    const selectedValueId = hiddenValueField.value;
     let totalPages = 1;
-    let langField = document.getElementById('_partners_sites_remote_lang' );
-    let langValue = langField.value;
+    const langField = document.getElementById('_partners_sites_remote_lang' );
+    const langValue = langField ? langField.value : 'none';
 
     selectField.innerHTML = '';
 
@@ -37,7 +37,7 @@ const fetchCategories = () => {
         URL = URL.slice(0, -1);
     }
     URL = URL + '/wp-json/wp/v2/categories/?per_page=100';
-    if ( langValue != 'none' ) {
+    if ( langValue !== 'none' ) {
         URL = URL + '&lang=' + langValue;
     }
     fetch( URL )
@@ -46,13 +46,13 @@ const fetchCategories = () => {
         return response.json()
     })
     .then( data => {
-        let opt = document.createElement('option');
+        const opt = document.createElement('option');
         opt.value = '';
         opt.innerHTML = __( 'All Categories', 'jeo-mps' );
         selectField.appendChild(opt);
 
         data.forEach( ( term ) => {
-            let opt = document.createElement('option');
+            const opt = document.createElement('option');
             opt.value = term.id;
             opt.innerHTML = term.name;
             if ( term.id == selectedValueId ) {
@@ -66,10 +66,10 @@ const fetchCategories = () => {
 
         for (let i = 2; i <= totalPages ; i++){
             fetch( url + '&page=' + i)
-            .then( response => { return response.json() } )
+            .then( response => response.json() )
             .then( data => {
                 data.forEach( ( term ) => {
-                    let opt = document.createElement('option');
+                    const opt = document.createElement('option');
                     opt.value = term.id;
                     opt.innerHTML = term.name;
                     if ( term.id == selectedValueId ) {
@@ -99,42 +99,41 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         }
         this.state = {
             isOpen: false,
-            btnDisabled: btnDisabled,
+            btnDisabled,
             btnText: __( 'Preview Import and Save', 'jeo-mps' ),
             html: '',
             httpResponse: false,
             responseData: false,
             modalTitle: __('Preview Import', 'jeo-mps' )
         };
-        this.siteURLInput.addEventListener( 'change', () => { JeoPartnersPreviewButtonObj.changeURL() } );
+        this.siteURLInput.addEventListener( 'change', () => { window.JeoPartnersPreviewButtonObj.changeURL() } );
     }
     changeURL() {
         window.JeoPartnersPreviewButtonObj.setState( { btnDisabled: false } );
-
     }
     getThumbnail( item ) {
-        if( typeof item['_embedded']['wp:featuredmedia'][0][ 'source_url'] == 'undefined' ) {
-            if ( typeof item['yoast_head_json'] == 'undefined' ) {
+        if( typeof item._embedded['wp:featuredmedia'][0].source_url === 'undefined' ) {
+            if ( typeof item.yoast_head_json === 'undefined' ) {
                 return '';
             }
-            if ( typeof item['yoast_head_json'][ 'og_image'] == 'undefined' ) {
+            if ( typeof item.yoast_head_json.og_image === 'undefined' ) {
                 return '';
             }
-            if ( typeof item['yoast_head_json'][ 'og_image'][0] == 'undefined' ) {
+            if ( typeof item.yoast_head_json.og_image[0] === 'undefined' ) {
                 return '';
             }
-            if ( typeof item['yoast_head_json'][ 'og_image'][0][ 'url' ] == 'undefined' ) {
+            if ( typeof item.yoast_head_json.og_image[0].url === 'undefined' ) {
                 return '';
             }
-            return item['yoast_head_json'][ 'og_image'][0][ 'url' ];
+            return item.yoast_head_json.og_image[0].url;
         }
-        return item['_embedded']['wp:featuredmedia'][0][ 'source_url'];
+        return item._embedded['wp:featuredmedia'][0].source_url;
     }
     loadTest() {
-        let selectField = document.getElementById('_partners_sites_remote_category' );
-        let dateField = document.getElementById('_partners_sites_date' );
-        let langField = document.getElementById('_partners_sites_remote_lang' );
-        let langValue = langField.value;
+        const selectField = document.getElementById('_partners_sites_remote_category' );
+        const dateField = document.getElementById('_partners_sites_date' );
+        const langField = document.getElementById('_partners_sites_remote_lang' );
+        const langValue = langField ? langField.value : 'none';
 
         this.setState( { btnText: __( 'Loading..', 'jeo-mps' ), btnDisabled: true } );
         let URL = this.siteURLInput.value;
@@ -150,8 +149,8 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
             URL = URL + '&categories[]=' + selectField.value;
         }
         if ( dateField.value && dateField.value != '' ) {
-            let format = JSON.parse( dateField.dataset.datepicker );
-            let date = new Date( dateField.value );
+            const format = JSON.parse( dateField.dataset.datepicker );
+            const date = new Date( dateField.value );
 
 
             URL = URL + '&after=' + date.toISOString();
@@ -160,7 +159,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
             URL = URL + '&lang=' + langValue;
         }
 
-        fetch( URL )
+        window.fetch( URL )
         .then( (response) => {
             if( ! response.ok) {
                 this.setState( { btnDisabled: false, httpResponse: __( 'The request for that partner is not ok', 'jeo-mps' ), isOpen: true, btnText: __( 'Preview Import and Save', 'jeo-mps' ), modalTitle: __('Preview Import', 'jeo-mps' ) } );
@@ -171,7 +170,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
                 modalTitle = __( 'Preview Import - Posts found: ', 'jeo-mps' ) + response.headers.get('x-wp-total');
             }
 
-            this.setState( { modalTitle: modalTitle } );
+            this.setState( { modalTitle } );
             return response.json();
           })
         .then( ( data ) =>{
@@ -201,79 +200,77 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         const httpResponse = this.state.httpResponse;
         const responseData = this.state.responseData;
 
-        const siteURL = false;
-
         return (
-            <Fragment>
-                {btnDisabled && (
-                    <Button variant="primary" disabled>
-                        { this.state.btnText }
-                    </Button>
+	<Fragment>
+		{ btnDisabled && (
+		<Button variant="primary" disabled>
+			{ this.state.btnText }
+		</Button>
                 ) }
-                { btnDisabled == false && (
-                    <Button variant="primary" disable onClick={ () => this.loadTest()  }>
-                        { this.state.btnText }
-                    </Button>
+		{ btnDisabled == false && (
+		<Button variant="primary" disable onClick={ () => this.loadTest()  }>
+			{ this.state.btnText }
+		</Button>
                 ) }
 
-                { isOpen && (
-                    <Modal
-                        title={ this.state.modalTitle }
-                        onRequestClose={ () => this.setState( { isOpen: false } ) }
+		{ isOpen && (
+		<Modal
+			title={ this.state.modalTitle }
+			onRequestClose={ () => this.setState( { isOpen: false } ) }
                     >
-                        { httpResponse && (
-                            <div dangerouslySetInnerHTML={{ __html: httpResponse }} />
-                        ) }
-                        { responseData && (
-                            <div className="preview-posts">
-                                <div className="preview-save">
-                                    <Button variant="primary" disable onClick={ () => this.runNow() }>
-                                        { __( 'Save and run now', 'jeo-mps' )}
-                                    </Button>
-                                </div>
-                                <div className="preview-posts__posts">
-                                    <div class="preview-posts__header">
-                                            <div>{ __( 'Featured image', 'jeo-mps' ) }</div>
-                                            <div style={ { maxWidth: '60%' } }>{ __( 'Title', 'jeo-mps' ) }</div>
-                                            <div>{ __( 'Author', 'jeo-mps' ) }</div>
-                                    </div>
-                                    { responseData.map(item => (
-                                        <article className="preview-posts__post">
-											<div>
-                                            { this.getThumbnail( item ) != '' && (
-                                                <img height="90" width="160" src={ this.getThumbnail( item ) } />
-                                            )}
-                                            </div>
-                                            <div><a href={ item.link } target="_blank" dangerouslySetInnerHTML={ { __html: item.title.rendered } } /></div>
-											<div>{ item._embedded.author.map(author => author.name).join(', ') }</div>
-                                        </article>
-                                    )) }
-                                </div>
-                                <div className="preview-save">
-                                    <Button variant="primary" disable onClick={ () => this.runNow() }>
-                                        { __( 'Save and run now', 'jeo-mps' )}
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
-                        { ! responseData && (
-                            <div className="preview-save">
-                                <br></br>
-                                <Button variant="primary" disable onClick={ () => this.save() }>
-                                    { __( 'Save anyway', 'jeo-mps' )}
-                                </Button>
-                            </div>
-                        )}
+			{ httpResponse && (
+			<div dangerouslySetInnerHTML={ { __html: httpResponse } } />
+            ) }
+			{ responseData && (
+			<div className="preview-posts">
+				<div className="preview-save">
+					<Button variant="primary" disable onClick={ () => this.runNow() }>
+						{ __( 'Save and run now', 'jeo-mps' ) }
+					</Button>
+				</div>
+				<div className="preview-posts__posts">
+					<div className="preview-posts__header">
+						<div>{ __( 'Featured image', 'jeo-mps' ) }</div>
+						<div style={ { maxWidth: '60%' } }>{ __( 'Title', 'jeo-mps' ) }</div>
+						<div>{ __( 'Author', 'jeo-mps' ) }</div>
+					</div>
+					{ responseData.map(item => (
+						<article className="preview-posts__post" key={ item.id }>
+							<div>
+								{ this.getThumbnail( item ) !== '' && (
+									<img height="90" width="160" src={ this.getThumbnail( item ) } alt={ item.title.rendered } />
+                                ) }
+							</div>
+							<div><a href={ item.link } target="_blank" rel="noreferrer" dangerouslySetInnerHTML={ { __html: item.title.rendered } } /></div>
+							<div>{ item._embedded.author.map(author => author.name).join(', ') }</div>
+						</article>
+                    )) }
+				</div>
+				<div className="preview-save">
+					<Button variant="primary" disable onClick={ () => this.runNow() }>
+						{ __( 'Save and run now', 'jeo-mps' ) }
+					</Button>
+				</div>
+			</div>
+            ) }
+			{ ! responseData && (
+			<div className="preview-save">
+				<br></br>
+				<Button variant="primary" disable onClick={ () => this.save() }>
+					{ __( 'Save anyway', 'jeo-mps' ) }
+				</Button>
+			</div>
+            ) }
 
-                    </Modal>
-                ) }
-            </Fragment>
+		</Modal>
+    ) }
+	</Fragment>
         );
     }
 };
 
 // remove unused wordpress ui things
-var css = '#edit-slug-box, #minor-publishing-actions, #misc-publishing-actions { display:none }',
+const css = '#edit-slug-box, #minor-publishing-actions, #misc-publishing-actions { display:none }',
 head = document.head || document.getElementsByTagName('head')[0],
 style = document.createElement('style');
 head.appendChild(style);
@@ -292,7 +289,7 @@ document.addEventListener( 'DOMContentLoaded', () => {
 
     const siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
     document.getElementById( 'major-publishing-actions' ).style.display = 'flex';
-    let metabox = document.querySelector( '#publishing-action' );
+    const metabox = document.querySelector( '#publishing-action' );
 
     render(<JeoPartnersPreviewButton />, metabox )
 
