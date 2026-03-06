@@ -82,6 +82,24 @@ trait Singleton {
     	}
 	}
 
+	function get_edited_post_id () {
+		global $pagenow;
+
+    	if ( ! is_admin() ) {
+    		return null;
+    	}
+
+    	if ( $pagenow === 'post.php' ) {
+        	$post_id = isset( $_GET[ 'post' ] ) ? $_GET[ 'post' ] : null;
+
+        	if ( $post_id ) {
+            	return intval( $post_id );
+        	}
+    	}
+
+		return null;
+	}
+
 	public function get_all_langs_names( $lang = 'en' ){
 		global $wpdb;
 		$lang_data = array();

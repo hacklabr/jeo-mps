@@ -2,99 +2,314 @@ import { Component, Fragment, render } from '@wordpress/element';
 import { Modal, Button } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
 
-/**
- * functions
- */
+function buildUrl ( siteURL, path, params = {} ) {
+	const url = new URL( path, siteURL );
+	for ( const [ key, value ] of Object.entries( params ) ) {
+		url.searchParams.set( key, String( value ) );
+	}
+	return url;
+}
 
-const isValidHttpURL = ( siteURL ) => {
-    let testURL;
+function fetchPostTypes ( baseURL, lang = 'none' ) {
+	const params = { per_page: 100 };
+	if ( lang !== 'none' ) {
+		params.lang = lang;
+	}
+
+	const url = buildUrl( baseURL, '/wp-json/wp/v2/types/', params );
+
+	return fetch( url ).then( ( response ) => {
+		if ( ! response.ok ) {
+			return {};
+		}
+		return response.json();
+	} );
+}
+
+function fetchTaxonomies ( baseURL, lang = 'none' ) {
+	const params = { per_page: 100 };
+	if ( lang !== 'none' ) {
+		params.lang = lang;
+	}
+
+	const url = buildUrl( baseURL, '/wp-json/wp/v2/taxonomies/', params );
+
+	return fetch( url ).then( ( response ) => {
+		if ( ! response.ok ) {
+			return {};
+		}
+		return response.json();
+	} );
+}
+
+function fetchTermsPage ( baseURL, segmentURL, lang, page ) {
+	const params = { page, per_page: 100 };
+	if ( lang !== 'none' ) {
+		params.lang = lang;
+	}
+
+	const url = buildUrl( baseURL, segmentURL, params );
+
+	return fetch( url ).then( ( response ) => {
+		if ( ! response.ok ) {
+			return [];
+		}
+
+		return response.json()
+	} );
+}
+
+function fetchTerms ( baseURL, taxonomy, lang = 'none' ) {
+	const segmentURL = `/wp-json/${taxonomy.rest_namespace}/${taxonomy.rest_base}/`;
+
+	const params = { per_page: 100 };
+	if ( lang !== 'none' ) {
+		params.lang = lang;
+	}
+
+	const url = buildUrl( baseURL, segmentURL, params );
+
+	return fetch( url ).then( ( response ) => {
+		if ( ! response.ok ) {
+			return {};
+		}
+
+		const totalPages = response.headers.get('X-WP-TotalPages');
+
+		return Promise.all( [
+			response.json(),
+			...( Array.from( { length: totalPages - 1 } ).map( ( v, i ) => fetchTermsPage( baseURL, segmentURL, lang, i + 2 ) ) )
+		] ).then( ( result ) => result.flat() );
+	} );
+}
+
+function fillSelectField ( id, options, selected, defaultLabel = null ) {
+	const selectField = document.getElementById( id );
+	selectField.innerHTML = '';
+
+	if ( defaultLabel ) {
+		const defaultOption = document.createElement('option');
+		defaultOption.value = '';
+		defaultOption.innerHTML = defaultLabel;
+		if ( ! selected ) {
+			defaultOption.selected = true;
+		}
+		selectField.appendChild(defaultOption);
+	}
+
+	for ( const [ value, label ] of Object.entries( options ) ) {
+		const option = document.createElement('option');
+		option.value = value;
+		option.innerHTML = label;
+		if ( selected == value ) {
+			option.selected = true;
+		}
+		selectField.appendChild(option);
+	}
+}
+
+function fillPostTypeField ( id, postTypes, selected ) {
+	const options = {};
+
+	for ( const postType of Object.values( postTypes ) ) {
+		options[ postType.slug ] = postType.name;
+	}
+
+	fillSelectField( id, options, selected );
+}
+
+function fillTaxonomyField ( id, postType, taxonomies, selected ) {
+	const options = {};
+
+	const filteredTaxonomies = Object.values( taxonomies ).filter( ( taxonomy ) => {
+		return taxonomy.types.includes( postType );
+	} );
+
+	for ( const taxonomy of filteredTaxonomies ) {
+		options[ taxonomy.slug ] = taxonomy.name;
+	}
+
+	fillSelectField( id, options, selected, __( 'All taxonomies', 'jeo-mps' ) );
+}
+
+function fillTermField ( id, terms, selected ) {
+	const options = {};
+
+	for ( const term of terms ) {
+		options[ term.id ] = term.name;
+	}
+
+	fillSelectField( id, options, selected, __( 'All terms', 'jeo-mps' ) );
+}
+
+function isValidHttpURL ( siteURL ) {
     try {
-        testURL = new URL(siteURL);
-    } catch (_) {
+        const testURL = new URL(siteURL);
+		return testURL.protocol === "http:" || testURL.protocol === "https:";
+    } catch (err) {
         return false;
     }
-
-    return testURL.protocol === "http:" || testURL.protocol === "https:";
-
 }
-const fetchCategories = () => {
-    const siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
-    let URL = siteURLInput.value;
-    let categories = [];
-    const selectField = document.getElementById('_partners_sites_remote_category' );
-    const hiddenValueField = document.getElementById('_partners_sites_remote_category_value' );
-    const selectedValueId = hiddenValueField.value;
-    let totalPages = 1;
-    const langField = document.getElementById('_partners_sites_remote_lang' );
-    const langValue = langField ? langField.value : 'none';
+class JeoMPSContext {
+	constructor() {
+		this.selected = globalThis.jeo_partners_posts_data;
 
-    selectField.innerHTML = '';
+		this.local = {
+			postTypes: null,
+			taxonomies: null,
+			terms: {},
+		};
 
-    if ( ! isValidHttpURL( URL ) ) {
-        return;
-    }
-    if ( URL.substr(URL.length - 1) == '/' ) {
-        URL = URL.slice(0, -1);
-    }
-    URL = URL + '/wp-json/wp/v2/categories/?per_page=100';
-    if ( langValue !== 'none' ) {
-        URL = URL + '&lang=' + langValue;
-    }
-    fetch( URL )
-    .then(response => {
-        totalPages = response.headers.get('X-WP-TotalPages');
-        return response.json()
-    })
-    .then( data => {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.innerHTML = __( 'All Categories', 'jeo-mps' );
-        selectField.appendChild(opt);
+		this.remote = {
+			postTypes: null,
+			taxonomies: null,
+			terms: {},
+		};
+	}
 
-        data.forEach( ( term ) => {
-            const opt = document.createElement('option');
-            opt.value = term.id;
-            opt.innerHTML = term.name;
-            if ( term.id == selectedValueId ) {
-                opt.setAttribute( 'selected', 'selected' );
-            }
-            selectField.appendChild(opt);
-            hiddenValueField.value = selectedValueId;
-        } )
-        hiddenValueField.value = selectedValueId;
-        categories = categories.concat( data );
+	init () {
+		const localPromise = this.initLocal();
 
-        for (let i = 2; i <= totalPages ; i++){
-            fetch( url + '&page=' + i)
-            .then( response => response.json() )
-            .then( data => {
-                data.forEach( ( term ) => {
-                    const opt = document.createElement('option');
-                    opt.value = term.id;
-                    opt.innerHTML = term.name;
-                    if ( term.id == selectedValueId ) {
-                        opt.setAttribute( 'selected', 'selected' );
-                    }
-                    selectField.appendChild(opt);
-                } )
-                hiddenValueField.value = selectedValueId;
-            });
-        }
+		const remotePromise = this.selected.remote.siteURL ? this.initRemote() : Promise.resolve();
 
-    });
+		return Promise.all([ localPromise, remotePromise ]);
+	}
 
+	initLocal () {
+		return Promise.all( [ this.fetchLocalPostTypes(), this.fetchLocalTaxonomies() ] ).then( () => {
+			this.setLocalPostType( this.selected.local.postType );
+			this.setLocalTaxonomy( this.selected.local.taxonomy, true );
+
+			this.fetchLocalTerms( this.local.taxonomies[ this.selected.local.taxonomy ] ).then( () => {
+				this.setLocalTerm( this.selected.local.term );
+			} );
+
+			fillPostTypeField( '_partners_sites_local_post_type', this.local.postTypes, this.selected.local.postType );
+		} );
+	}
+
+	initRemote () {
+		return Promise.all( [ this.fetchRemotePostTypes(), this.fetchRemoteTaxonomies() ] ).then( () => {
+			this.setRemotePostType( this.selected.remote.postType );
+			this.setRemoteTaxonomy( this.selected.remote.taxonomy, true );
+
+			this.fetchRemoteTerms( this.remote.taxonomies[ this.selected.remote.taxonomy ] ).then( () => {
+				this.setRemoteTerm( this.selected.remote.term );
+			} );
+
+			fillPostTypeField( '_partners_sites_remote_post_type', this.remote.postTypes, this.selected.remote.postType );
+		} );
+	}
+
+	fetchLocalPostTypes () {
+		return fetchPostTypes( this.selected.local.siteURL ).then( ( postTypes ) => {
+			this.local.postTypes = postTypes;
+		} );
+	}
+
+	fetchLocalTaxonomies () {
+		return fetchTaxonomies( this.selected.local.siteURL ).then( ( taxonomies ) => {
+			this.local.taxonomies = taxonomies;
+		} );
+	}
+
+	fetchLocalTerms ( taxonomy ) {
+		return fetchTerms( this.selected.local.siteURL, taxonomy ).then( ( terms ) => {
+			this.local.terms[ taxonomy.slug ] = terms;
+		} );
+	}
+
+	fetchRemotePostTypes () {
+		return fetchPostTypes( this.selected.remote.siteURL, this.selected.remote.lang ).then( ( postTypes ) => {
+			this.remote.postTypes = postTypes;
+		} );
+	}
+
+	fetchRemoteTaxonomies () {
+		return fetchTaxonomies( this.selected.remote.siteURL, this.selected.remote.lang ).then( ( taxonomies ) => {
+			this.remote.taxonomies = taxonomies;
+		} );
+	}
+
+	fetchRemoteTerms ( taxonomy) {
+		return fetchTerms( this.selected.remote.siteURL, taxonomy, this.selected.remote.lang ).then( ( terms ) => {
+			this.remote.terms[ taxonomy.slug ] = terms;
+		} );
+	}
+
+	getRemotePostURL () {
+		const postType = this.remote.postTypes[ this.selected.remote.postType ];
+
+		if ( postType ) {
+			return `/wp-json/${postType.rest_namespace}/${postType.rest_base}`;
+		}
+
+		return `/wp-json/wp/v2/${this.selected.remote.postType}`;
+	}
+
+	setLocalPostType (postType) {
+		this.selected.local.postType = postType;
+		fillTaxonomyField( '_partners_sites_local_taxonomy', postType, this.local.taxonomies, this.selected.local.taxonomy );
+	}
+
+	setLocalTaxonomy (taxonomy) {
+		this.selected.local.taxonomy = taxonomy;
+		if ( this.local.terms[ taxonomy ] ) {
+			fillTermField( '_partners_sites_local_category', this.local.terms[ taxonomy ], this.selected.local.term );
+		} else {
+			this.fetchLocalTerms( this.local.taxonomies[ taxonomy ] ).then( () => {
+				fillTermField( '_partners_sites_local_category', this.local.terms[ taxonomy ], this.selected.local.term );
+			} );
+		}
+	}
+
+	setLocalTerm (term) {
+		this.selected.local.term = term;
+	}
+
+	setRemotePostType (postType) {
+		this.selected.remote.postType = postType;
+		fillTaxonomyField( '_partners_sites_remote_taxonomy', postType, this.remote.taxonomies, this.selected.remote.taxonomy );
+	}
+
+	setRemoteTaxonomy (taxonomy) {
+		this.selected.remote.taxonomy = taxonomy;
+		if ( this.remote.terms[ taxonomy ] ) {
+			fillTermField( '_partners_sites_remote_category', this.remote.terms[ taxonomy ], this.selected.remote.term );
+		} else {
+			this.fetchRemoteTerms( this.remote.taxonomies[ taxonomy ] ).then( () => {
+				fillTermField( '_partners_sites_remote_category', this.remote.terms[ taxonomy ], this.selected.remote.term );
+			} );
+		}
+	}
+
+	setRemoteTerm (term) {
+		this.selected.remote.term = term;
+	}
+
+	setRemoteLang (lang) {
+		this.selected.remote.siteURL = lang;
+		if ( this.selected.remote.siteURL ) {
+			this.initRemote();
+		}
+	}
+
+	setRemoteURL (siteURL) {
+		this.selected.remote.siteURL = siteURL;
+		if ( siteURL ) {
+			this.initRemote();
+		}
+	}
 }
 
-
-
-const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Component {
+class JeoPartnersPreviewButton extends Component {
     constructor() {
         super();
 
         let btnDisabled = true;
-        window.JeoPartnersPreviewButtonObj = this;
-        this.siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
-        if ( this.siteURLInput && this.siteURLInput.value && this.siteURLInput.value != '' ) {
+        globalThis.JeoPartnersPreviewButtonObj = this;
+        this.siteURLInput = document.getElementById( '_partners_sites_site_url' );
+        if ( this.siteURLInput && this.siteURLInput.value ) {
             btnDisabled = false;
         }
         this.state = {
@@ -106,10 +321,10 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
             responseData: false,
             modalTitle: __('Preview Import', 'jeo-mps' )
         };
-        this.siteURLInput.addEventListener( 'change', () => { window.JeoPartnersPreviewButtonObj.changeURL() } );
+        this.siteURLInput.addEventListener( 'change', () => { globalThis.JeoPartnersPreviewButtonObj.changeURL() } );
     }
     changeURL() {
-        window.JeoPartnersPreviewButtonObj.setState( { btnDisabled: false } );
+        globalThis.JeoPartnersPreviewButtonObj.setState( { btnDisabled: false } );
     }
     getThumbnail( item ) {
         if( typeof item._embedded['wp:featuredmedia'][0].source_url === 'undefined' ) {
@@ -130,36 +345,45 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
         return item._embedded['wp:featuredmedia'][0].source_url;
     }
     loadTest() {
+        const taxonomyField = document.getElementById('_partners_sites_remote_taxonomy' );
         const selectField = document.getElementById('_partners_sites_remote_category' );
         const dateField = document.getElementById('_partners_sites_date' );
         const langField = document.getElementById('_partners_sites_remote_lang' );
         const langValue = langField ? langField.value : 'none';
 
-        this.setState( { btnText: __( 'Loading..', 'jeo-mps' ), btnDisabled: true } );
-        let URL = this.siteURLInput.value;
-        if ( ! isValidHttpURL( URL ) ) {
+        this.setState( { btnText: __( 'Loading...', 'jeo-mps' ), btnDisabled: true } );
+
+        if ( ! isValidHttpURL( this.siteURLInput.value ) ) {
             this.setState( { btnDisabled: false, httpResponse: __( 'This Site URL is not valid. Check it and try again.', 'jeo-mps' ), isOpen: true, btnText: __( 'Preview Import and Save', 'jeo-mps' ) } );
             return;
         }
-        if ( URL.substr(URL.length - 1) == '/' ) {
-            URL = URL.slice(0, -1);
+
+		const params = { per_page: 10, _embed: '' };
+
+		let taxonomySlug = taxonomyField.value;
+		if ( taxonomySlug === 'category' ) {
+			taxonomySlug = 'categories';
+		} else if ( taxonomySlug === 'post_tag' ) {
+			taxonomySlug = 'tags';
+		}
+
+        if ( selectField.value ) {
+            params[taxonomySlug] = selectField.value;
         }
-        URL = URL + '/wp-json/wp/v2/posts/?per_page=10&_embed';
-        if ( selectField.value && selectField.value != '' ) {
-            URL = URL + '&categories[]=' + selectField.value;
-        }
-        if ( dateField.value && dateField.value != '' ) {
+
+        if ( dateField.value ) {
             const format = JSON.parse( dateField.dataset.datepicker );
             const date = new Date( dateField.value );
-
-
-            URL = URL + '&after=' + date.toISOString();
-        }
-        if ( langValue != 'none' ) {
-            URL = URL + '&lang=' + langValue;
+            params.after = date.toISOString();
         }
 
-        window.fetch( URL )
+        if ( langValue !== 'none' ) {
+            params.lang = langValue;
+        }
+
+		const url = buildUrl( this.siteURLInput.value, jeompsContext.getRemotePostURL(), params );
+
+        globalThis.fetch( url )
         .then( (response) => {
             if( ! response.ok) {
                 this.setState( { btnDisabled: false, httpResponse: __( 'The request for that partner is not ok', 'jeo-mps' ), isOpen: true, btnText: __( 'Preview Import and Save', 'jeo-mps' ), modalTitle: __('Preview Import', 'jeo-mps' ) } );
@@ -173,7 +397,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
             this.setState( { modalTitle } );
             return response.json();
           })
-        .then( ( data ) =>{
+        .then( ( data ) => {
             if ( data.length > 0 ) {
                 this.setState( { btnDisabled: false, httpResponse: false, isOpen: true, responseData: data, btnText: __( 'Preview Import and Save', 'jeo-mps' ) } );
             } else {
@@ -267,7 +491,7 @@ const JeoPartnersPreviewButton = class JeoPartnersPreviewButton extends Componen
 	</Fragment>
         );
     }
-};
+}
 
 // remove unused wordpress ui things
 const css = '#edit-slug-box, #minor-publishing-actions, #misc-publishing-actions { display:none }',
@@ -287,24 +511,49 @@ if (style.styleSheet){
 document.addEventListener( 'DOMContentLoaded', () => {
     document.getElementById( 'run_import_now' ).value = 'auto_save';
 
-    const siteURLInput = document.querySelector( 'input[name="_partners_sites_site_url"]' );
     document.getElementById( 'major-publishing-actions' ).style.display = 'flex';
-    const metabox = document.querySelector( '#publishing-action' );
+    const metabox = document.getElementById( 'publishing-action' );
 
-    render(<JeoPartnersPreviewButton />, metabox )
+    render(<JeoPartnersPreviewButton />, metabox );
 
-    // Load categories to categories select field
-    fetchCategories();
+	globalThis.jeompsContext = new JeoMPSContext();
 
-    siteURLInput.addEventListener( 'change', () => {
-        fetchCategories();
-    })
-    document.getElementById( '_partners_sites_remote_category_value' ).value = document.getElementById('_partners_sites_remote_category' ).value;
+	globalThis.jeompsContext.init().then( () => {
+		document.getElementById( '_partners_sites_site_url' ).addEventListener( 'change', ( event ) => {
+			jeompsContext.setRemoteURL( event.target.value );
+		})
 
-    document.getElementById('_partners_sites_remote_category' ).addEventListener( 'change', () => {
-        document.getElementById( '_partners_sites_remote_category_value' ).value = document.getElementById('_partners_sites_remote_category' ).value;
-    })
-    document.getElementById('_partners_sites_remote_lang' ).addEventListener( 'change', () => {
-        fetchCategories();
-    })
+		document.getElementById('_partners_sites_local_post_type' ).addEventListener( 'change', ( event ) => {
+			jeompsContext.setLocalPostType( event.target.value );
+		});
+
+		document.getElementById('_partners_sites_local_taxonomy' ).addEventListener( 'change', ( event ) => {
+			jeompsContext.setLocalTaxonomy( event.target.value );
+		});
+
+		document.getElementById('_partners_sites_local_category' ).addEventListener( 'change', ( event ) => {
+			jeompsContext.setLocalTerm( event.target.value );
+		});
+
+		document.getElementById('_partners_sites_remote_post_type' ).addEventListener( 'change', ( event ) => {
+			jeompsContext.setRemotePostType( event.target.value );
+		});
+
+		document.getElementById('_partners_sites_remote_taxonomy' ).addEventListener( 'change', ( event ) => {
+			jeompsContext.setRemoteTaxonomy( event.target.value );
+		});
+
+		document.getElementById( '_partners_sites_remote_category_value' ).value = document.getElementById('_partners_sites_remote_category' ).value;
+		document.getElementById('_partners_sites_remote_category' ).addEventListener( 'change', ( event ) => {
+			document.getElementById( '_partners_sites_remote_category_value' ).value = event.target.value;
+			jeompsContext.setRemoteTerm( event.target.value );
+		});
+
+		if ( document.getElementById('_partners_sites_remote_lang' ) ) {
+			document.getElementById('_partners_sites_remote_lang' ).addEventListener( 'change', ( event ) => {
+				jeompsContext.setRemoteLang( event.target.value );
+			});
+		}
+	} );
+
 });

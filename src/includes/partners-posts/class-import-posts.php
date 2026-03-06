@@ -175,12 +175,22 @@ class Importer {
         //echo '<br>ISODATE<pre>';
         //print_r( $iso_date );
         //echo '</pre>';
-        if ( isset( $_ṔOST[ "{$this->post_type}_remote_category_value" ] ) ) {
-            $request_params[ 'categories' ] = [ $_ṔOST[ "{$this->post_type}_remote_category_value" ] ];
+
+		$post_type = $data[ "{$this->post_type}_remote_post_type" ][0] ?? 'post';
+
+		$taxonomy = $data[ "{$this->post_type}_remote_taxonomy" ][0] ?? 'categories';
+		if ( $taxonomy === 'category' ) {
+			$taxonomy = 'categories';
+		} elseif ( $taxonomy === 'post_tag' ) {
+			$taxonomy = 'tags';
+		}
+
+        if ( isset( $_POST[ "{$this->post_type}_remote_category_value" ] ) ) {
+            $request_params[ 'categories' ] = [ $_POST[ "{$this->post_type}_remote_category_value" ] ];
         } else {
             if( isset( $data[ "{$this->post_type}_remote_category_value" ] ) ) {
                 if( $data[ "{$this->post_type}_remote_category_value" ][0] && is_numeric( $data[ "{$this->post_type}_remote_category_value" ][0] ) ) {
-                    $request_params[ 'categories' ] = [ $data[ "{$this->post_type}_remote_category_value" ][0] ];
+                    $request_params[ $taxonomy ] = [ $data[ "{$this->post_type}_remote_category_value" ][0] ];
                 }
             }
         }
@@ -198,7 +208,7 @@ class Importer {
             }
         }
         $base_url = $URL;
-        $URL = $URL . '/wp-json/wp/v2/posts/?' . http_build_query( $request_params );
+        $URL = $URL . '/wp-json/wp/v2/' . $post_type . '/?' . http_build_query( $request_params );
 
         $response = wp_remote_get( $URL, [] );
         if ( ! is_wp_error( $response ) && is_array( $response ) ) {

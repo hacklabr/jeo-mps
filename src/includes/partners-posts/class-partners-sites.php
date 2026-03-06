@@ -125,6 +125,7 @@ class Partners_Sites {
 
 	}
 	public function load_assets() {
+		$prefix = $this->post_type;
 		if ( ! $this->is_edit_screen_from_post_type( $this->post_type ) ) {
 			return;
 		}
@@ -151,7 +152,39 @@ class Partners_Sites {
 
 		wp_set_script_translations( 'jeo-partners-posts', 'jeo-mps', plugin_dir_path(  dirname( __FILE__ , 2 ) ) . 'languages' );
 
+		$post_id = $this->get_edited_post_id();
+
+		wp_localize_script( 'jeo-partners-posts', 'jeo_partners_posts_data', [
+			'local' => [
+				'siteURL' => get_home_url(),
+				'postType' => $this->get_post_meta( $post_id, $prefix . '_local_post_type', 'post' ),
+				'taxonomy' => $this->get_post_meta( $post_id, $prefix . '_local_taxonomy', 'category' ),
+				'term' => $this->get_post_meta( $post_id, $prefix . '_local_category' ),
+			],
+			'remote' => [
+				'siteURL' => $this->get_post_meta( $post_id, $prefix . '_site_url' ),
+				'lang' => $this->get_post_meta( $post_id, $prefix . '_remote_lang', 'none' ),
+				'postType' => $this->get_post_meta( $post_id, $prefix . '_remote_post_type', 'post' ),
+				'taxonomy' => $this->get_post_meta( $post_id, $prefix . '_remote_taxonomy', 'category' ),
+				'term' => $this->get_post_meta( $post_id, $prefix . '_remote_category' ),
+			],
+		] );
 	}
+
+	private function get_post_meta( $post_id, $meta_key, $fallback = '' ) {
+		if ( ! $post_id ) {
+			return $fallback;
+		}
+
+		$meta_value = get_post_meta( $post_id, $meta_key, true );
+
+		if ( $meta_value ) {
+			return $meta_value;
+		} else {
+			return $fallback;
+		}
+	}
+
 	public function add_cmb2_fields() {
 		if ( '/wp-admin/post.php' == $_SERVER[ 'PHP_SELF' ] && 'GET' == $_SERVER['REQUEST_METHOD'] && ! isset( $_REQUEST[ 'post_type'] ) ) {
 			$_REQUEST[ 'post_type'] = get_post_type( $_GET[ 'post' ] );
@@ -186,6 +219,7 @@ class Partners_Sites {
 			'type' => 'text',
 			'default' => get_post_meta( $post_id, $prefix . '_site_url', true )
 		) );
+
 		if ( function_exists('icl_object_id') && defined('ICL_LANGUAGE_CODE') ) {
 			$options = [
 				'none' => __( 'None - Default language from partner site', 'jeo-mps')
@@ -194,39 +228,55 @@ class Partners_Sites {
 				$options[ $lang['code'] ] = $lang['name'];
 			}
 			$site_info_box->add_field( array(
-				'name' 				=> __( 'Get posts by language (WPML)', 'jeo-mps' ),
+				'name' 				=> __( 'Language (WPML)', 'jeo-mps' ),
 				'id' 				=> $prefix . '_remote_lang',
 				'type' 				=> 'select',
 				'show_option_none' 	=> false,
 				'options'			=> $options,
 			) );
-
 	   	}
+
 		$site_info_box->add_field( array(
-			'name' 				=> __( 'Get posts from a specific category', 'jeo-mps' ),
+			'name' 				=> __( 'Remote post type', 'jeo-mps' ),
+			'id' 				=> $prefix . '_remote_post_type',
+			'type' 				=> 'select',
+			'options'			=> [],
+		) );
+
+		$site_info_box->add_field( array(
+			'name' 				=> __( 'Remote taxonomy', 'jeo-mps' ),
+			'id' 				=> $prefix . '_remote_taxonomy',
+			'type' 				=> 'select',
+			'show_option_none' 	=> true,
+			'options'			=> [],
+		) );
+
+		$site_info_box->add_field( array(
+			'name' 				=> __( 'Remote term', 'jeo-mps' ),
 			'id' 				=> $prefix . '_remote_category',
 			'type' 				=> 'select',
 			'show_option_none' 	=> true,
 			'options'			=> [],
 		) );
+
         $site_info_box->add_field( array(
-            'name' => __( 'Import posts published from date', 'jeo-mps' ),
+            'name' => __( 'Published from date', 'jeo-mps' ),
             'id'   => $prefix . '_date',
             'type' => 'text_date_timestamp',
             'date_format' => 'Y-m-d',
 			'default' => time()
         ) );
+
 		$current_remote_category = '';
 		if ( $post_id ) {
 			$current_remote_category = wp_get_post_categories( $post_id, [ 'fields' => 'ids' ] );
 		}
+
 		$site_info_box->add_field( array(
 			'id'   		=> $prefix . '_remote_category_value',
 			'type' 		=> 'hidden',
 			'default' 	=> $current_remote_category,
 		) );
-
-
 
 		$site_info_box->add_field( array(
 			'id'   		=> 'run_import_now',
@@ -267,12 +317,29 @@ class Partners_Sites {
 			remove_filter('terms_clauses', array($sitepress,'terms_clauses'));
 		}
 
- 		$post_config_box->add_field( array(
-			'name' 				=> __( 'Post category on your site', 'jeo-mps' ),
-			'id' 				=> $prefix . '_local_category',
-			'taxonomy'			=> 'category',
-			'type'				=> 'taxonomy_select',
+		$post_config_box->add_field( array(
+			'name' 				=> __( 'Local post type', 'jeo-mps' ),
+			'id' 				=> $prefix . '_local_post_type',
+			'type' 				=> 'select',
+			'options'			=> [],
 		) );
+
+		$post_config_box->add_field( array(
+			'name' 				=> __( 'Local taxonomy', 'jeo-mps' ),
+			'id' 				=> $prefix . '_local_taxonomy',
+			'type' 				=> 'select',
+			'show_option_none' 	=> true,
+			'options'			=> [],
+		) );
+
+		$post_config_box->add_field( array(
+			'name' 				=> __( 'Local term', 'jeo-mps' ),
+			'id' 				=> $prefix . '_local_category',
+			'type' 				=> 'select',
+			'show_option_none' 	=> true,
+			'options'			=> [],
+		) );
+
 		if ( taxonomy_exists( 'partner' ) ) {
 			$post_config_box->add_field( array(
 				'name' 				=> __( 'Newspack Media Partner', 'jeo-mps' ),

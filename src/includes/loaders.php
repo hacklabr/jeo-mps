@@ -34,13 +34,10 @@ function jeo_mps_autoload($class_name) {
 
 }
 
-/**
- * Gets the instance of the Storymap
- * @return \Storymap Storymap instance
- */
 function jeo_partners_sites() {
 	return \Jeo_MPS\Partners_Sites::get_instance();
 }
+
 function jeo_mps() {
 	return \Jeo_MPS::get_instance();
 }
