@@ -335,7 +335,14 @@ class Importer {
         global $wpdb;
 
         $posts = json_decode( $posts, true );
-        $category = get_post_meta( $id, $this->post_type. '_category', true );
+		$post_type = get_post_meta( $id, $this->post_type. '_local_post_type', true ) ?: 'post';
+		$taxonomy = get_post_meta( $id, $this->post_type. '_local_taxonomy', true ) ?: 'category';
+        $term = get_post_meta( $id, $this->post_type. '_local_category', true );
+		$term_arr = get_post_meta( $id, $this->post_type. '_category', true );
+
+		if ( empty( $term ) && ! empty( $term_arr ) ) {
+			$term = $term_arr;
+		}
 
         if( taxonomy_exists( 'partner' ) ) {
             if( isset( $_POST[ '_partners_sites_newspack_partner'] ) ) {
@@ -379,7 +386,7 @@ class Importer {
                 'post_name'         => $post[ 'slug' ],
                 'meta_input'        => $metadata,
                 'post_status'       => 'publish',
-                'post_type'         => 'post',
+                'post_type'         => $post_type,
             ];
             $post_inserted = wp_insert_post( $post_args, true, true );
 
@@ -405,18 +412,21 @@ class Importer {
                         wp_set_object_terms( $post_inserted, [ $partner_terms[0]->term_id ], 'partner', true );
                     }
                 }
-                if ( $category ) {
-					$category_id = absint( $category[0] );
-					$category_id = apply_filters( 'wpml_object_id', $category_id, 'category', true, $this->lang );
+                if ( $term ) {
+					if ( is_array( $term ) ) {
+						$term = $term[0];
+					}
+					$term_id = absint( $term );
+					$term_id = apply_filters( 'wpml_object_id', $term_id, $taxonomy, true, $this->lang );
 
-                    wp_set_object_terms( $post_inserted, [ $category_id ], 'category', false );
+                    wp_set_object_terms( $post_inserted, [ $term_id ], $taxonomy, false );
 
                     /**
                      * Add support to Yoast Primary Term
                      */
                     if ( class_exists( 'WPSEO_Primary_Term' ) ) {
                         $primary_term_object = new \WPSEO_Primary_Term( 'category', $post_inserted );
-                        $primary_term_object->set_primary_term( $category_id );
+                        $primary_term_object->set_primary_term( $term_id );
                     }
                 }
 
