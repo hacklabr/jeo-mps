@@ -186,7 +186,7 @@ class Importer {
 		}
 
         if ( isset( $_POST[ "{$this->post_type}_remote_category_value" ] ) ) {
-            $request_params[ 'categories' ] = [ $_POST[ "{$this->post_type}_remote_category_value" ] ];
+            $request_params[ $taxonomy ] = [ $_POST[ "{$this->post_type}_remote_category_value" ] ];
         } else {
             if( isset( $data[ "{$this->post_type}_remote_category_value" ] ) ) {
                 if( $data[ "{$this->post_type}_remote_category_value" ][0] && is_numeric( $data[ "{$this->post_type}_remote_category_value" ][0] ) ) {
