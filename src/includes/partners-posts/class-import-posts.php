@@ -442,7 +442,7 @@ class Importer {
                      * Add support to Yoast Primary Term
                      */
                     if ( class_exists( 'WPSEO_Primary_Term' ) ) {
-                        $primary_term_object = new \WPSEO_Primary_Term( 'category', $post_inserted );
+                        $primary_term_object = new \WPSEO_Primary_Term( $taxonomy, $post_inserted );
                         $primary_term_object->set_primary_term( $term_id );
                     }
                 }
