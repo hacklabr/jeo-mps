@@ -185,14 +185,12 @@ class Importer {
 			$taxonomy = 'tags';
 		}
 
-        if ( isset( $_POST[ "{$this->post_type}_remote_category_value" ] ) ) {
-            $request_params[ $taxonomy ] = [ $_POST[ "{$this->post_type}_remote_category_value" ] ];
-        } else {
-            if( isset( $data[ "{$this->post_type}_remote_category_value" ] ) ) {
-                if( $data[ "{$this->post_type}_remote_category_value" ][0] && is_numeric( $data[ "{$this->post_type}_remote_category_value" ][0] ) ) {
-                    $request_params[ $taxonomy ] = [ $data[ "{$this->post_type}_remote_category_value" ][0] ];
-                }
-            }
+        if ( isset( $_POST[ "{$this->post_type}_remote_category" ] ) ) {
+            $request_params[ $taxonomy ] = [ $_POST[ "{$this->post_type}_remote_category" ] ];
+        } else if( isset( $data[ "{$this->post_type}_remote_category_value" ] ) ) {
+			if( $data[ "{$this->post_type}_remote_category_value" ][0] && is_numeric( $data[ "{$this->post_type}_remote_category_value" ][0] ) ) {
+				$request_params[ $taxonomy ] = [ $data[ "{$this->post_type}_remote_category_value" ][0] ];
+			}
         }
         $URL = $data[ "{$this->post_type}_site_url" ][0];
         if ( '/' === substr( $URL, -1) ) {
@@ -207,8 +205,23 @@ class Importer {
                 $this->lang = ICL_LANGUAGE_CODE;
             }
         }
+
+		$post_types = wp_remote_get( $URL . '/wp-json/wp/v2/types' );
+		$post_types = json_decode( $post_types['body'], true );
+
         $base_url = $URL;
-        $URL = $URL . '/wp-json/wp/v2/' . $post_type . '/?' . http_build_query( $request_params );
+
+		if ( $post_type_meta = $post_types[ $post_type ] ?? null ) {
+			if ( $collection_url = $post_type_meta['_links']['wp:items']['href'] ?? null ) {
+				$URL = $collection_url;
+			} else {
+				$URL = $URL . '/wp-json/' . $post_type_meta['rest_namespace'] . '/' . $post_type_meta['rest_base'];
+			}
+		} else {
+			$URL = $URL . '/wp-json/wp/v2/' . $post_type;
+		}
+
+		$URL = $URL . '/?' . http_build_query( $request_params );
 
         $response = wp_remote_get( $URL, [] );
         if ( ! is_wp_error( $response ) && is_array( $response ) ) {
@@ -281,7 +294,11 @@ class Importer {
     }
 
 	private function set_post_author( $post_id, $author){
-        $user = get_user_by( 'slug', $author[ 'slug' ] );
+		if ( empty( $author[ 'slug' ] ) ) {
+			return;
+		}
+
+        $user = get_user_by( 'slug', $author['slug' ] );
 
         if ( !empty( $user ) ) {
             wp_update_post( [ 'ID' => $post_id, 'post_author' => $user->ID ] );
